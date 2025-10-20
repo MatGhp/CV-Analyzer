@@ -6,6 +6,7 @@ using CVAnalyzer.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CVAnalyzer.Infrastructure;
 
@@ -20,9 +21,17 @@ public static class DependencyInjection
             var keyVaultUri = configuration["KeyVault:Uri"];
             if (!string.IsNullOrEmpty(keyVaultUri))
             {
-                var secretClient = new SecretClient(new Uri(keyVaultUri), new DefaultAzureCredential());
-                var secretResponse = secretClient.GetSecret("DatabaseConnectionString");
-                connectionString = secretResponse.Value.Value;
+                try
+                {
+                    var secretClient = new SecretClient(new Uri(keyVaultUri), new DefaultAzureCredential());
+                    var secretResponse = secretClient.GetSecret("DatabaseConnectionString");
+                    connectionString = secretResponse.Value.Value;
+                }
+                catch (Exception ex)
+                {
+                    var logger = services.BuildServiceProvider().GetService<ILogger<SecretClient>>();
+                    logger?.LogError(ex, "Failed to retrieve connection string from Key Vault. Falling back to configuration.");
+                }
             }
         }
 
