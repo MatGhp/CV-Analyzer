@@ -1,0 +1,15 @@
+.git/
+.gitignore
+.dockerignore
+**/bin/
+**/obj/
+**/out/
+**/logs/
+**/.vs/
+**/.vscode/
+**/TestResults/
+**/*.user
+**/*.suo
+**/*.dbmdl
+**/*.jfm
+**/node_modules/
