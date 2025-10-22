@@ -1,0 +1,26 @@
+@CVAnalyzer.API_HostAddress = http://localhost:5167
+
+### Health Check
+GET {{CVAnalyzer.API_HostAddress}}/api/health
+Accept: application/json
+
+###
+
+### Upload Resume
+POST {{CVAnalyzer.API_HostAddress}}/api/resumes
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="resume.pdf"
+Content-Type: application/pdf
+
+< ./sample-resume.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### Get Resume by ID
+GET {{CVAnalyzer.API_HostAddress}}/api/resumes/1
+Accept: application/json
+
+###

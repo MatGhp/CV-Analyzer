@@ -1,0 +1,4 @@
+environment = "dev"
+resource_group_name = "rg-cvanalyzer-dev"
+location = "germanywestcentral"
+app_name = "cvanalyzer"
