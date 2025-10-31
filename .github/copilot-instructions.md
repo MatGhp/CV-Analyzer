@@ -47,6 +47,12 @@ This project follows Clean Architecture (Domain / Application / Infrastructure /
   - When enabling Key Vault, app startup will attempt to fetch `DatabaseConnectionString` via `SecretClient` with `DefaultAzureCredential` — ensure environment provides credentials (or disable `UseKeyVault` during local dev).
   - Blob storage and AI analyzer interfaces are registered in Infrastructure DI — inspect `IBlobStorageService` and `IAIResumeAnalyzerService` implementations before changing behavior.
 
+- Azure MCP integration (GitHub Copilot coding agent)
+  - This repo has Azure MCP server configured for GitHub Copilot coding agent integration.
+  - Copilot can now query Azure resources, check deployment status, and suggest infrastructure improvements.
+  - Managed identity `mi-copilot-coding-agent` provides secure, passwordless access to Azure resources with Reader permissions.
+  - Use natural language with Copilot: "Show me my App Service configuration" or "Check the status of my SQL database".
+
 - Files to consult for examples
   - `src/CVAnalyzer.API/Program.cs` — host, Serilog, Swagger, CORS, health checks
   - `src/CVAnalyzer.Application/DependencyInjection.cs` — MediatR + validation behavior
