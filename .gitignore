@@ -73,6 +73,14 @@ tf.rc
 .env.local
 *.secrets.json
 
+# ASP.NET appsettings (keep only examples)
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+appsettings.*.json
+!appsettings.json
+!appsettings.*.example.json
+
 # JetBrains Rider
 .idea/
 *.sln.iml
