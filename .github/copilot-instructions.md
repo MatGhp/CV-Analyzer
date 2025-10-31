@@ -2,6 +2,8 @@
 
 This project follows Clean Architecture (Domain / Application / Infrastructure / API) using .NET 9, MediatR (CQRS), FluentValidation and EF Core. The guidance below is focused, actionable and tied to concrete files in this repo so an AI coding agent can be productive immediately.
 
+**🔐 IMPORTANT: Before making ANY changes, read `.github/security-guardrails.md` for security rules and best practices.**
+
 - Big picture
   - Layers: Domain (entities/exceptions), Application (CQRS features, validators, behaviors), Infrastructure (EF Core DbContext, blob and AI services, KeyVault), API (controllers, middleware, Serilog).
   - Entry point: `src/CVAnalyzer.API/Program.cs` — registers `AddApplication()` and `AddInfrastructure(configuration)` and configures Serilog, Swagger and CORS.
@@ -53,11 +55,27 @@ This project follows Clean Architecture (Domain / Application / Infrastructure /
   - Managed identity `mi-copilot-coding-agent` provides secure, passwordless access to Azure resources with Reader permissions.
   - Use natural language with Copilot: "Show me my App Service configuration" or "Check the status of my SQL database".
 
+- Infrastructure as Code (Terraform)
+  - Azure infrastructure is managed via Terraform in `terraform/` directory.
+  - Three environments supported: dev, test, prod (use `environments/dev.tfvars`, etc.).
+  - Resources follow naming convention: `{resource-type}-cvanalyzer-{environment}` (e.g., `app-cvanalyzer-dev`, `sql-cvanalyzer-dev`).
+  - Deploy: `terraform plan -var-file="environments/dev.tfvars"` then `terraform apply -var-file="environments/dev.tfvars"`.
+  - Each environment creates: Resource Group, Key Vault, SQL Server + Database, App Service Plan + Web App, and access policies.
+  - SQL password must be set via environment variable: `$env:TF_VAR_sql_admin_password = "YourPassword"` (PowerShell) or `export TF_VAR_sql_admin_password="YourPassword"` (Bash).
+  - See `terraform/README.md` for deployment instructions and `.github/terraform-instructions.md` for Terraform best practices.
+  - KISS principle: modules are simple and focused (app-service, key-vault, sql-database). Avoid circular dependencies.
+  - State management: currently using local state; for team collaboration, use Azure Storage backend (see terraform-instructions.md).
+
 - Files to consult for examples
   - `src/CVAnalyzer.API/Program.cs` — host, Serilog, Swagger, CORS, health checks
   - `src/CVAnalyzer.Application/DependencyInjection.cs` — MediatR + validation behavior
   - `src/CVAnalyzer.Infrastructure/DependencyInjection.cs` — DbContext, KeyVault, service registrations
   - `src/CVAnalyzer.Application/Features/Resumes/*` — canonical example of command/query/validator/handler
   - `src/CVAnalyzer.API/Controllers/ResumesController.cs` — controller → MediatR usage
+
+- Security & compliance resources
+  - `.github/security-guardrails.md` — **READ THIS FIRST** - Security rules, best practices, and guardrails for all code changes
+  - `SECURITY_REVIEW.md` — Comprehensive security review results and recommendations
+  - `CODE_REVIEW_SUMMARY.md` — Summary of security fixes and improvements applied
 
 If any of these files or behaviors are out-of-date or you want additional examples (e.g., tests, EF migrations, or the AI analyzer implementation), tell me which area to expand and I will update the instructions.

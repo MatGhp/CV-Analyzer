@@ -13,11 +13,6 @@ variable "environment" {
   type        = string
 }
 
-variable "app_name" {
-  description = "Application name"
-  type        = string
-}
-
 variable "admin_username" {
   description = "SQL Server admin username"
   type        = string
@@ -31,6 +26,6 @@ variable "admin_password" {
 }
 
 variable "key_vault_id" {
-  description = "ID of the Key Vault"
+  description = "ID of the Key Vault to store connection string"
   type        = string
 }

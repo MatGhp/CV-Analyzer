@@ -13,18 +13,7 @@ variable "environment" {
   type        = string
 }
 
-variable "app_name" {
-  description = "Application name"
-  type        = string
-}
-
-variable "connection_string" {
-  description = "Database connection string"
-  type        = string
-  sensitive   = true
-}
-
 variable "key_vault_uri" {
-  description = "Key Vault URI"
+  description = "Key Vault URI for configuration"
   type        = string
 }

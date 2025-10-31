@@ -8,7 +8,12 @@ output "app_service_name" {
   value       = azurerm_linux_web_app.main.name
 }
 
-output "app_service_principal_id" {
+output "principal_id" {
   description = "Principal ID of the App Service managed identity"
   value       = azurerm_linux_web_app.main.identity[0].principal_id
+}
+
+output "tenant_id" {
+  description = "Tenant ID of the App Service managed identity"
+  value       = azurerm_linux_web_app.main.identity[0].tenant_id
 }
