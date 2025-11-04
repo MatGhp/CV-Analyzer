@@ -1,19 +1,26 @@
 ## CV Analyzer — Copilot instructions for code changes
 
-This project follows Clean Architecture (Domain / Application / Infrastructure / API) using .NET 9, MediatR (CQRS), FluentValidation and EF Core. The guidance below is focused, actionable and tied to concrete files in this repo so an AI coding agent can be productive immediately.
+**Monorepo Structure**: This repository contains two microservices - .NET Backend (Clean Architecture) and Python AI Service (FastAPI + Agent Framework). Follow service-specific patterns below.
 
 **🔐 IMPORTANT: Before making ANY changes, read `.github/security-guardrails.md` for security rules and best practices.**
+
+---
+
+## .NET Backend Service (`backend/`)
+
+This service follows Clean Architecture (Domain / Application / Infrastructure / API) using .NET 9, MediatR (CQRS), FluentValidation and EF Core.
 
 ### Architecture Overview
 
 - **Layer dependencies**: API → Infrastructure → Application → Domain (strict one-way). Domain has zero dependencies.
-- **Entry point**: `src/CVAnalyzer.API/Program.cs` — registers `AddApplication()` and `AddInfrastructure(configuration)`, configures Serilog (rolling file + console), Swagger, CORS "AllowAll", and global `ExceptionHandlingMiddleware`.
-- **Core entities**: `Resume` (blob URL, content, score, status) and `Suggestion` (category, priority) in `Domain/Entities`.
+- **Entry point**: `backend/src/CVAnalyzer.API/Program.cs` — registers `AddApplication()` and `AddInfrastructure(configuration)`, configures Serilog (rolling file + console), Swagger, CORS "AllowAll", and global `ExceptionHandlingMiddleware`.
+- **Core entities**: `Resume` (blob URL, content, score, status) and `Suggestion` (category, priority) in `backend/src/CVAnalyzer.Domain/Entities`.
 - **Exception handling**: All unhandled exceptions are caught by `ExceptionHandlingMiddleware`, which transforms `ValidationException` to 400 BadRequest with structured error details.
+- **AI Integration**: Calls Python AI Service via HTTP (`IAIResumeAnalyzerService` → `http://ai-service:8000/analyze`)
 
 ### Implementing New Features (CQRS Pattern)
 
-- **Request location**: `src/CVAnalyzer.Application/Features/<Feature>/Commands` (writes) or `.../Queries` (reads).
+- **Request location**: `backend/src/CVAnalyzer.Application/Features/<Feature>/Commands` (writes) or `.../Queries` (reads).
   - Example: `UploadResumeCommand.cs` is a `record` implementing `IRequest<Guid>`.
   - Pattern: `public record MyCommand(...) : IRequest<TResult>;`
 - **Handler**: Same folder, named `MyCommandHandler.cs` implementing `IRequestHandler<MyCommand, TResult>`.
@@ -26,12 +33,12 @@ This project follows Clean Architecture (Domain / Application / Infrastructure /
 
 ### Dependency Injection Patterns
 
-- **Application layer** (`src/CVAnalyzer.Application/DependencyInjection.cs`):
+- **Application layer** (`backend/src/CVAnalyzer.Application/DependencyInjection.cs`):
   - `AddMediatR` with `RegisterServicesFromAssembly` — auto-discovers all handlers.
   - `AddOpenBehavior(typeof(ValidationBehavior<,>))` — injects validation pipeline.
   - `AddValidatorsFromAssembly` — auto-discovers all FluentValidation validators.
   - **No manual handler registration needed** — just add files in correct namespace.
-- **Infrastructure layer** (`src/CVAnalyzer.Infrastructure/DependencyInjection.cs`):
+- **Infrastructure layer** (`backend/src/CVAnalyzer.Infrastructure/DependencyInjection.cs`):
   - Registers `ApplicationDbContext` with SQL Server connection string (from config or Key Vault).
   - Scopes: `IApplicationDbContext`, `IBlobStorageService`, `IAIResumeAnalyzerService`.
   - **Key Vault**: When `UseKeyVault=true`, fetches `DatabaseConnectionString` secret via `DefaultAzureCredential`. Fallback to config on error (logs warning).
@@ -43,14 +50,14 @@ This project follows Clean Architecture (Domain / Application / Infrastructure /
   - Entities: `Resume`, `Suggestion` (1:N relationship).
   - Always use `IApplicationDbContext` interface in handlers, not concrete type.
 - **Querying**: Use `.Include(r => r.Suggestions)` for navigation properties (see `GetResumeByIdQueryHandler.cs`).
-- **Migrations**: Run from solution root: `dotnet ef migrations add <Name> --project src/CVAnalyzer.Infrastructure --startup-project src/CVAnalyzer.API`.
+- **Migrations**: Run from backend directory: `dotnet ef migrations add <Name> --project src/CVAnalyzer.Infrastructure --startup-project src/CVAnalyzer.API`.
 - **Connection strings**:
   - Dev fallback: `Server=(localdb)\\mssqllocaldb;Database=CVAnalyzerDb;Trusted_Connection=True;MultipleActiveResultSets=true`
   - Docker: `Server=sqlserver;Database=CVAnalyzerDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True`
 
 ### Controllers & API Endpoints
 
-- **Controller pattern**: Thin controllers delegate to MediatR (`src/CVAnalyzer.API/Controllers/ResumesController.cs`).
+- **Controller pattern**: Thin controllers delegate to MediatR (`backend/src/CVAnalyzer.API/Controllers/ResumesController.cs`).
   - Validate inputs, create request object, call `_mediator.Send(...)`, return ActionResult.
   - Example: `Upload` method accepts `IFormFile`, creates `UploadResumeCommand` with `file.OpenReadStream()`, returns `CreatedAtAction`.
 - **Health endpoint**: `GET /api/health` via `HealthController` (also mapped in Program.cs with `MapHealthChecks("/health")`).
@@ -67,13 +74,14 @@ This project follows Clean Architecture (Domain / Application / Infrastructure /
   - `ConnectionStrings:DefaultConnection` — SQL connection string.
   - `UseKeyVault` (true/false) — enable Azure Key Vault secret retrieval.
   - `KeyVault:Uri` — Key Vault endpoint (e.g., `https://kv-cvanalyzer-dev.vault.azure.net/`).
+  - `AIService:BaseUrl` — Python AI service endpoint (e.g., `http://ai-service:8000`)
   - Serilog settings in `appsettings.json` / `appsettings.Development.json`.
 
 
 ### Build, Run & Test Workflows
 
 **Local development:**
-1. Restore dependencies: `dotnet restore` (solution root)
+1. Restore dependencies: `dotnet restore` (from backend/ directory)
 2. Build solution: `dotnet build`
 3. Run API: `cd src/CVAnalyzer.API` → `dotnet run`
    - API hosts on HTTPS (port varies, check console output)
@@ -81,16 +89,17 @@ This project follows Clean Architecture (Domain / Application / Infrastructure /
    - Uses LocalDB by default: `(localdb)\\mssqllocaldb`
 
 **Docker deployment:**
-- Local stack: `docker-compose up -d` (runs API + SQL Server 2022)
-  - API: `http://localhost:5000`
+- Local stack: `docker-compose up -d` (from repository root - runs .NET API + Python AI Service + SQL Server)
+  - .NET API: `http://localhost:5000`
+  - Python AI: `http://localhost:8000`
   - SQL: `localhost:1433` (sa/YourStrong@Passw0rd)
   - Volume: `sqlserver-data` for persistence
-- Production: `docker build -f Dockerfile -t cvanalyzer-api .`
+- Production: `docker build -f Dockerfile -t cvanalyzer-api .` (from backend/ directory)
 
 **Testing:**
-- Run all tests: `dotnet test` (solution root)
-- Unit tests: `tests/CVAnalyzer.UnitTests` (5 tests currently)
-- Integration tests: `tests/CVAnalyzer.IntegrationTests` (1 test currently)
+- Run all tests: `dotnet test` (from backend/ directory)
+- Unit tests: `backend/tests/CVAnalyzer.UnitTests`
+- Integration tests: `backend/tests/CVAnalyzer.IntegrationTests`
 - Test frameworks: xUnit, FluentAssertions, NSubstitute
 
 **Database migrations:**
@@ -164,22 +173,20 @@ public class MyCommandValidator : AbstractValidator<MyCommand>
 
 | Purpose | File Path |
 |---------|-----------|
-| MediatR + validation setup | `src/CVAnalyzer.Application/DependencyInjection.cs` |
-| DbContext + Key Vault | `src/CVAnalyzer.Infrastructure/DependencyInjection.cs` |
-| Command example | `src/CVAnalyzer.Application/Features/Resumes/Commands/UploadResumeCommand.cs` |
-| Query with includes | `src/CVAnalyzer.Application/Features/Resumes/Queries/GetResumeByIdQueryHandler.cs` |
-| Validator example | `src/CVAnalyzer.Application/Features/Resumes/Commands/UploadResumeCommandValidator.cs` |
-| Controller pattern | `src/CVAnalyzer.API/Controllers/ResumesController.cs` |
-| Global exception handling | `src/CVAnalyzer.API/Middleware/ExceptionHandlingMiddleware.cs` |
-| Validation pipeline | `src/CVAnalyzer.Application/Behaviors/ValidationBehavior.cs` |
-| Startup configuration | `src/CVAnalyzer.API/Program.cs` |
+| MediatR + validation setup | `backend/src/CVAnalyzer.Application/DependencyInjection.cs` |
+| DbContext + Key Vault | `backend/src/CVAnalyzer.Infrastructure/DependencyInjection.cs` |
+| Command example | `backend/src/CVAnalyzer.Application/Features/Resumes/Commands/UploadResumeCommand.cs` |
+| Query with includes | `backend/src/CVAnalyzer.Application/Features/Resumes/Queries/GetResumeByIdQueryHandler.cs` |
+| Validator example | `backend/src/CVAnalyzer.Application/Features/Resumes/Commands/UploadResumeCommandValidator.cs` |
+| Controller pattern | `backend/src/CVAnalyzer.API/Controllers/ResumesController.cs` |
+| Global exception handling | `backend/src/CVAnalyzer.API/Middleware/ExceptionHandlingMiddleware.cs` |
+| Validation pipeline | `backend/src/CVAnalyzer.Application/Behaviors/ValidationBehavior.cs` |
+| Startup configuration | `backend/src/CVAnalyzer.API/Program.cs` |
 | Terraform module example | `terraform/modules/app-service/main.tf` |
 
 ### Security & Compliance
 
 - **Primary resource**: `.github/security-guardrails.md` — **READ BEFORE ANY CODE CHANGES**.
-- **Review summary**: `SECURITY_REVIEW.md` — comprehensive security audit results.
-- **Code review**: `CODE_REVIEW_SUMMARY.md` — security fixes applied.
 - **Key principles**:
   - Never commit secrets (use Key Vault or env vars)
   - Validate all inputs (FluentValidation)
@@ -187,5 +194,173 @@ public class MyCommandValidator : AbstractValidator<MyCommand>
   - Log errors but sanitize sensitive data
 
 ---
+
+## Python AI Service (`ai-service/`)
+
+FastAPI microservice using Microsoft Agent Framework for AI-powered resume analysis with GPT-4o.
+
+### Architecture Overview
+
+- **Framework**: FastAPI + Uvicorn (async ASGI server)
+- **AI Integration**: Microsoft Agent Framework (preview) with Azure AI Foundry
+- **Model**: GPT-4o via Azure AI deployment
+- **Authentication**: DefaultAzureCredential (managed identity or service principal)
+- **Configuration**: Pydantic Settings with environment variables
+- **Deployment**: Docker container with non-root user
+
+### Key Components
+
+**Configuration (`ai-service/app/config.py`)**:
+- Singleton pattern with `@lru_cache`
+- Environment variables: `AI_FOUNDRY_ENDPOINT`, `MODEL_DEPLOYMENT_NAME`, Azure credentials
+- Validation via Pydantic Settings
+
+**Models (`ai-service/app/models.py`)**:
+- `ResumeAnalysisRequest`: Validates content (10-10000 chars), user_id
+- `ResumeAnalysisResponse`: Score (0-100), optimized_content, suggestions[], metadata
+- `Suggestion`: Category, description, priority (1-5)
+
+**Agent (`ai-service/app/agent.py`)**:
+- `ResumeAnalyzerAgent` class with Agent Framework integration
+- `initialize()`: Creates AzureAIAgentClient and ChatAgent
+- `analyze_resume()`: Main analysis method with structured output
+- System instructions: Expert resume analyzer with ATS optimization, scoring criteria
+- Response parsing: JSON extraction with fallback error handling
+- Singleton via `get_agent()` function
+
+**FastAPI App (`ai-service/app/main.py`)**:
+- Lifespan context manager for agent init/cleanup
+- `POST /analyze`: Resume analysis endpoint
+- `GET /health`: Health check with AI connectivity status
+- CORS middleware, global exception handler
+- Structured logging
+
+### API Endpoints
+
+- `POST /analyze`: Analyze resume content
+  - Request: `{"content": "...", "user_id": "..."}`
+  - Response: Score, optimized content, suggestions, metadata
+- `GET /health`: Health check
+  - Response: `{"status": "healthy", "ai_connected": true/false}`
+- `GET /`: Root endpoint with service info
+
+### Development Workflow
+
+**Local development:**
+```bash
+cd ai-service
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt --pre  # --pre for Agent Framework
+cp .env.example .env  # Configure Azure credentials
+python -m app.main
+```
+
+**Docker:**
+```bash
+# From repository root
+docker-compose up ai-service
+```
+
+**Testing:**
+```bash
+pytest
+```
+
+### Dependencies
+
+**Core:**
+- `fastapi==0.115.5` - Web framework
+- `uvicorn[standard]==0.32.1` - ASGI server
+- `agent-framework-azure-ai>=0.1.0` - Microsoft Agent Framework (preview - requires `--pre`)
+- `azure-identity==1.19.0` - Azure authentication
+- `pydantic==2.10.3`, `pydantic-settings==2.6.1` - Data validation and settings
+
+**Development:**
+- `pytest`, `black`, `ruff`, `mypy`
+
+### Environment Variables
+
+Required:
+- `AI_FOUNDRY_ENDPOINT`: Azure AI Foundry endpoint URL
+- `MODEL_DEPLOYMENT_NAME`: GPT-4o deployment name (default: gpt-4o)
+
+Authentication (choose one):
+- **Service Principal**: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET`
+- **Managed Identity**: Automatic in Azure (no credentials needed)
+
+Optional:
+- `LOG_LEVEL`: INFO (default), DEBUG, WARNING, ERROR
+
+### Integration with .NET Backend
+
+The .NET backend calls this service via HTTP:
+
+```csharp
+// CVAnalyzer.Infrastructure/Services/AIResumeAnalyzerService.cs
+var response = await _httpClient.PostAsJsonAsync("/analyze", request);
+```
+
+Configuration in appsettings.json:
+```json
+{
+  "AIService": {
+    "BaseUrl": "http://ai-service:8000"  // Docker
+    // or "http://localhost:8000" for local dev
+  }
+}
+```
+
+### Common Patterns
+
+**Agent Framework usage:**
+```python
+# Initialize agent
+client = AzureAIAgentClient(endpoint, credential)
+agent = client.agents.create_agent(
+    model="gpt-4o",
+    instructions="System prompt...",
+    temperature=0.7
+)
+
+# Run analysis
+thread = client.agents.create_thread()
+message = client.agents.create_message(thread.id, content)
+run = client.agents.create_and_process_run(thread.id, agent.id)
+response = client.agents.list_messages(thread.id).data[0].content[0].text.value
+```
+
+**Error handling:**
+```python
+try:
+    result = await agent.analyze_resume(content, user_id)
+except Exception as e:
+    logger.error(f"Analysis failed: {e}")
+    raise HTTPException(status_code=500, detail="AI analysis failed")
+```
+
+### Security
+
+- Non-root Docker user (UID 1000)
+- DefaultAzureCredential for passwordless auth
+- Input validation via Pydantic (10-10000 chars)
+- Structured logging (no sensitive data)
+- Health check endpoint for monitoring
+
+### Key Files for Reference
+
+| Purpose | File Path |
+|---------|-----------|
+| FastAPI application | `ai-service/app/main.py` |
+| Agent Framework logic | `ai-service/app/agent.py` |
+| Pydantic models | `ai-service/app/models.py` |
+| Configuration | `ai-service/app/config.py` |
+| Dependencies | `ai-service/requirements.txt` |
+| Dockerfile | `ai-service/Dockerfile` |
+| Documentation | `ai-service/README.md` |
+
+---
+
+**Need more detail?** Tell me which area to expand (e.g., testing patterns, EF migrations, AI analyzer service, specific Terraform modules, CI/CD setup) and I'll update this file with concrete examples from the codebase.
 
 **Need more detail?** Tell me which area to expand (e.g., testing patterns, EF migrations, AI analyzer service, specific Terraform modules, CI/CD setup) and I'll update this file with concrete examples from the codebase.
