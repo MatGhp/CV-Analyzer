@@ -1,6 +1,6 @@
 # CV Analyzer - Angular Frontend
 
-Modern Angular 19 application for CV/Resume analysis using zoneless architecture, standalone components, and signals.
+Modern Angular 20 application for CV/Resume analysis using zoneless architecture, standalone components, and signals.
 
 ## 🏗️ Architecture
 
@@ -25,7 +25,7 @@ src/app/
 
 ### Key Technologies
 
-- **Angular 19** - Latest version with zoneless change detection
+- **Angular 20** - Latest version with zoneless change detection
 - **Standalone Components** - Modern Angular architecture (no NgModules)
 - **Signals** - Reactive state management
 - **SCSS** - Styling with variables and mixins

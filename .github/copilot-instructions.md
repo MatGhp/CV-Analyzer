@@ -8,11 +8,11 @@
 
 ## Angular Frontend (`frontend/`)
 
-Modern Angular 19 application with zoneless architecture, standalone components, and signals.
+Modern Angular 20 application with zoneless architecture, standalone components, and signals.
 
 ### Architecture Overview
 
-- **Framework**: Angular 19 with zoneless change detection (no zone.js)
+- **Framework**: Angular 20 with zoneless change detection (no zone.js)
 - **Components**: Standalone components only (no NgModules)
 - **State Management**: Signals with `signal()`, `computed()`, `effect()`
 - **Routing**: Client-side routing with lazy loading
@@ -646,7 +646,7 @@ except Exception as e:
 
 This monorepo contains three tightly integrated services:
 
-1. **Angular Frontend** (`frontend/`) - User interface with zoneless architecture
+1. **Angular Frontend** (`frontend/`) - User interface with Angular 20, zoneless architecture
 2. **.NET Backend** (`backend/`) - Business logic with Clean Architecture + CQRS
 3. **Python AI Service** (`ai-service/`) - AI-powered resume analysis with GPT-4o
 

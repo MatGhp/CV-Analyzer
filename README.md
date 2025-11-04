@@ -13,7 +13,7 @@ This monorepo contains two microservices that work together to provide intellige
 │                                                              │
 │  ┌──────────────────────────────────────────────┐          │
 │  │  Angular Frontend (frontend/)                │          │
-│  │  - Angular 19 (Zoneless + Signals)          │          │
+│  │  - Angular 20 (Zoneless + Signals)          │          │
 │  │  - Standalone Components                     │          │
 │  │  - Nginx Reverse Proxy                       │          │
 │  └────────────┬─────────────────────────────────┘          │
@@ -47,7 +47,7 @@ This monorepo contains two microservices that work together to provide intellige
 
 ```
 CV-Analyzer-Backend/
-├── frontend/                   # Angular 19 Frontend
+├── frontend/                   # Angular 20 Frontend
 │   ├── src/app/
 │   │   ├── core/              # Services, guards, interceptors
 │   │   ├── features/          # Feature modules
