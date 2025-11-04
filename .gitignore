@@ -81,6 +81,29 @@ ai-service/.coverage
 ai-service/htmlcov/
 
 # ============================================
+# Frontend (Angular)
+# ============================================
+# Node modules
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Angular build output
+frontend/dist/
+frontend/.angular/
+frontend/.sass-cache/
+
+# Angular testing
+frontend/coverage/
+
+# Package manager lock files (optional - consider tracking these)
+# package-lock.json
+# yarn.lock
+
+# ============================================
 # Terraform
 # ============================================
 **/.terraform/*

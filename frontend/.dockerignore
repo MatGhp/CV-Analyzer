@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+dist
+.angular
+.vscode
+.idea
+*.log
+.DS_Store
+Thumbs.db
+.env
+.env.local
+*.md
+!README.md

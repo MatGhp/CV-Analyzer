@@ -1,15 +1,18 @@
+# Production Docker Compose Configuration
+# This file is optimized for production deployment
+
 services:
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ${ACR_NAME}.azurecr.io/cv-analyzer-frontend:${IMAGE_TAG:-latest}
     ports:
-      - "4200:80"
+      - "80:80"
+      - "443:443"
     depends_on:
       - api
       - ai-service
     networks:
       - cvanalyzer-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
@@ -18,58 +21,36 @@ services:
       start_period: 10s
 
   api:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "5000:8080"
+    image: ${ACR_NAME}.azurecr.io/cv-analyzer-api:${IMAGE_TAG:-latest}
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=CVAnalyzerDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True
-      - UseKeyVault=false
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=${SQL_CONNECTION_STRING}
+      - UseKeyVault=true
+      - KeyVault__Uri=${KEY_VAULT_URI}
       - AIService__BaseUrl=http://ai-service:8000
     depends_on:
-      - sqlserver
       - ai-service
     networks:
       - cvanalyzer-network
+    restart: unless-stopped
 
   ai-service:
-    build:
-      context: ./ai-service
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
+    image: ${ACR_NAME}.azurecr.io/cv-analyzer-ai:${IMAGE_TAG:-latest}
     environment:
       - AI_FOUNDRY_ENDPOINT=${AI_FOUNDRY_ENDPOINT}
       - MODEL_DEPLOYMENT_NAME=${MODEL_DEPLOYMENT_NAME:-gpt-4o}
       - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
       - AZURE_TENANT_ID=${AZURE_TENANT_ID}
-      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
-      - LOG_LEVEL=INFO
+      - LOG_LEVEL=WARNING
     networks:
       - cvanalyzer-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
-    ports:
-      - "1433:1433"
-    volumes:
-      - sqlserver-data:/var/opt/mssql
-    networks:
-      - cvanalyzer-network
-
-volumes:
-  sqlserver-data:
 
 networks:
   cvanalyzer-network:

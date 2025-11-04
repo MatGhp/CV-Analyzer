@@ -11,9 +11,14 @@ This monorepo contains two microservices that work together to provide intellige
 │                     CV Analyzer Platform                     │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  Frontend (Planned/Separate)                                │
-│       │                                                      │
-│       ▼                                                      │
+│  ┌──────────────────────────────────────────────┐          │
+│  │  Angular Frontend (frontend/)                │          │
+│  │  - Angular 19 (Zoneless + Signals)          │          │
+│  │  - Standalone Components                     │          │
+│  │  - Nginx Reverse Proxy                       │          │
+│  └────────────┬─────────────────────────────────┘          │
+│               │ HTTP                                         │
+│               ▼                                              │
 │  ┌──────────────────────────────────────────────┐          │
 │  │  .NET API (backend/)                         │          │
 │  │  - Controllers & Routing                     │          │
@@ -42,6 +47,15 @@ This monorepo contains two microservices that work together to provide intellige
 
 ```
 CV-Analyzer-Backend/
+├── frontend/                   # Angular 19 Frontend
+│   ├── src/app/
+│   │   ├── core/              # Services, guards, interceptors
+│   │   ├── features/          # Feature modules
+│   │   └── shared/            # Shared components
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── README.md
+│
 ├── backend/                    # .NET 9 Web API
 │   ├── src/
 │   │   ├── CVAnalyzer.API/
@@ -82,6 +96,7 @@ CV-Analyzer-Backend/
 
 ### Prerequisites
 
+- **Frontend**: Node.js 18+, npm
 - **Backend**: .NET 9 SDK, Docker
 - **AI Service**: Python 3.11+, Docker
 - **Azure**: Azure CLI, Azure subscription
@@ -98,14 +113,26 @@ docker-compose up -d
 
 This starts:
 
+- Angular Frontend on `http://localhost:4200`
 - .NET API on `http://localhost:5000`
 - Python AI Service on `http://localhost:8000`
 - SQL Server on `localhost:1433`
 
 Access:
 
-- Swagger UI (API): `http://localhost:5000/swagger`
-- AI Service Docs: `http://localhost:8000/docs`
+- **Frontend Application**: `http://localhost:4200`
+- **Swagger UI (API)**: `http://localhost:5000/swagger`
+- **AI Service Docs**: `http://localhost:8000/docs`
+
+### Frontend (Angular)
+
+```bash
+cd frontend/cv-analyzer-frontend
+npm install
+npm start
+```
+
+See [frontend/cv-analyzer-frontend/FRONTEND_README.md](frontend/cv-analyzer-frontend/FRONTEND_README.md) for detailed documentation.
 
 ### Backend (.NET API)
 

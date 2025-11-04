@@ -1,8 +1,289 @@
 ## CV Analyzer — Copilot instructions for code changes
 
-**Monorepo Structure**: This repository contains two microservices - .NET Backend (Clean Architecture) and Python AI Service (FastAPI + Agent Framework). Follow service-specific patterns below.
+**Monorepo Structure**: This repository contains three main components - Angular Frontend, .NET Backend (Clean Architecture), and Python AI Service (FastAPI + Agent Framework). Follow service-specific patterns below.
 
 **🔐 IMPORTANT: Before making ANY changes, read `.github/security-guardrails.md` for security rules and best practices.**
+
+---
+
+## Angular Frontend (`frontend/`)
+
+Modern Angular 19 application with zoneless architecture, standalone components, and signals.
+
+### Architecture Overview
+
+- **Framework**: Angular 19 with zoneless change detection (no zone.js)
+- **Components**: Standalone components only (no NgModules)
+- **State Management**: Signals with `signal()`, `computed()`, `effect()`
+- **Routing**: Client-side routing with lazy loading
+- **Styling**: SCSS with component-scoped styles
+- **HTTP**: HttpClient with functional interceptors
+- **Build**: Multi-stage Docker build (Node 20 → nginx 1.25-alpine)
+- **Deployment**: Nginx serving static assets + reverse proxy to backend/AI service
+
+### Folder Structure (Best Practices)
+
+```
+frontend/src/app/
+├── core/                    # Singleton services, guards, interceptors (app-wide)
+│   ├── guards/             # Route guards (auth, permissions)
+│   ├── interceptors/       # HTTP interceptors (API, auth, error handling)
+│   ├── models/             # Domain models and interfaces
+│   └── services/           # Singleton services (API clients, state management)
+├── features/               # Feature modules (lazy-loaded)
+│   ├── resume-upload/      # Resume upload feature
+│   └── resume-analysis/    # Analysis results feature
+└── shared/                 # Reusable components, directives, pipes
+    ├── components/         # Shared UI components (buttons, cards, etc.)
+    ├── directives/         # Shared directives
+    └── pipes/              # Shared pipes (date, currency, etc.)
+```
+
+### Creating New Features
+
+**1. Feature Component (lazy-loaded):**
+```bash
+ng generate component features/my-feature --standalone
+```
+
+**2. Component Pattern (modern Angular):**
+```typescript
+import { Component, signal, computed, effect, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+
+@Component({
+  selector: 'app-my-feature',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './my-feature.html',
+  styleUrl: './my-feature.scss'
+})
+export class MyFeatureComponent {
+  // Use inject() instead of constructor injection
+  private readonly myService = inject(MyService);
+  
+  // Use signals for reactive state
+  data = signal<MyData[]>([]);
+  filteredData = computed(() => this.data().filter(d => d.active));
+  
+  // Use effect for side effects
+  constructor() {
+    effect(() => {
+      console.log('Data changed:', this.data());
+    });
+  }
+}
+```
+
+**3. Service Pattern:**
+```typescript
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
+
+@Injectable({ providedIn: 'root' })
+export class MyService {
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = `${environment.apiUrl}/my-resource`;
+  
+  getAll(): Observable<MyData[]> {
+    return this.http.get<MyData[]>(this.apiUrl);
+  }
+}
+```
+
+**4. Route Configuration (`app.routes.ts`):**
+```typescript
+import { Routes } from '@angular/router';
+
+export const routes: Routes = [
+  {
+    path: 'my-feature',
+    loadComponent: () => import('./features/my-feature/my-feature').then(m => m.MyFeatureComponent)
+  }
+];
+```
+
+### HTTP Services & API Integration
+
+- **Service location**: `core/services/*.service.ts`
+- **Pattern**: Use `inject(HttpClient)` instead of constructor injection
+- **Base URL**: Configured in `environments/environment.ts`
+- **Interceptor**: Global API interceptor in `core/interceptors/api.interceptor.ts`
+- **Error handling**: Centralized in interceptor, component-specific via RxJS `catchError`
+
+**Example API Service:**
+```typescript
+@Injectable({ providedIn: 'root' })
+export class ResumeService {
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = `${environment.apiUrl}/resumes`;
+
+  uploadResume(request: UploadResumeRequest): Observable<{ id: string }> {
+    const formData = new FormData();
+    formData.append('file', request.file);
+    formData.append('userId', request.userId);
+    return this.http.post<{ id: string }>(`${this.apiUrl}/upload`, formData);
+  }
+
+  getResume(id: string): Observable<Resume> {
+    return this.http.get<Resume>(`${this.apiUrl}/${id}`);
+  }
+}
+```
+
+### Environment Configuration
+
+**Development** (`src/environments/environment.ts`):
+```typescript
+export const environment = {
+  production: false,
+  apiUrl: 'http://localhost:5000/api',
+  aiServiceUrl: 'http://localhost:8000'
+};
+```
+
+**Production** (`src/environments/environment.prod.ts`):
+```typescript
+export const environment = {
+  production: true,
+  apiUrl: '/api',  // Nginx proxies to backend
+  aiServiceUrl: '/ai'  // Nginx proxies to AI service
+};
+```
+
+### Nginx Configuration
+
+**Key features in `frontend/nginx.conf`:**
+- **Reverse proxy** to backend services (`/api/` → `http://api:8080/api/`)
+- **AI service proxy** (`/ai/` → `http://ai-service:8000/`)
+- **SPA routing**: Serves `index.html` for all routes (`try_files $uri $uri/ /index.html`)
+- **Static asset caching**: 1 year for JS/CSS/images
+- **Security headers**: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection
+- **Health check**: `/health` endpoint returns 200
+
+### Docker Build & Deployment
+
+**Dockerfile** (`frontend/Dockerfile`):
+- **Stage 1 (Build)**: Node 20-alpine, `npm ci`, `npm run build --configuration=production`
+- **Stage 2 (Serve)**: nginx:1.25-alpine, copy built app from stage 1
+- **Output**: `dist/cv-analyzer-frontend/browser/` → `/usr/share/nginx/html`
+- **Port**: Exposes 80, mapped to 4200 in docker-compose
+- **Health check**: `wget --spider http://localhost/health`
+
+**Build commands:**
+```bash
+# Development
+cd frontend
+npm install
+npm start  # http://localhost:4200 with proxy to backend
+
+# Docker build
+docker build -t cv-analyzer-frontend ./frontend
+
+# Production build (local)
+npm run build -- --configuration=production
+```
+
+### App Configuration
+
+**Key file**: `src/app/app.config.ts`
+
+```typescript
+import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { routes } from './app.routes';
+import { apiInterceptor } from './core/interceptors/api.interceptor';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideZonelessChangeDetection(),  // Modern zoneless architecture
+    provideRouter(routes),
+    provideHttpClient(withInterceptors([apiInterceptor]))
+  ]
+};
+```
+
+### Common Patterns & Pitfalls
+
+**Quick snippets:**
+```typescript
+// Signal state with computed and effect
+const count = signal(0);
+const doubled = computed(() => count() * 2);
+effect(() => console.log('Count:', count()));
+
+// Standalone component template
+@Component({
+  selector: 'app-my-component',
+  standalone: true,
+  imports: [CommonModule, RouterLink, MyOtherComponent],
+  template: `
+    <div>{{ data() }}</div>
+    <button (click)="increment()">+</button>
+  `
+})
+
+// HTTP request with error handling
+this.http.get<Data>(url).pipe(
+  catchError(error => {
+    console.error('Request failed:', error);
+    return of(null);
+  })
+).subscribe(data => this.data.set(data));
+
+// FormData for file uploads
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+this.http.post('/api/upload', formData).subscribe();
+```
+
+**Common pitfalls:**
+- **Zone.js removed**: Don't use `NgZone` or zone-dependent libraries (use signals instead)
+- **Imports required**: Must explicitly import all dependencies in `imports: []` array
+- **Signals over RxJS**: Prefer signals for component state, RxJS for async operations/HTTP
+- **Environment files**: Must configure in `angular.json` under `fileReplacements` for build
+- **Proxy config**: `proxy.conf.json` only works in dev mode (`ng serve`), not in Docker build
+
+### Development Workflow
+
+**Local development (with backend):**
+```bash
+cd frontend
+npm start
+# Proxy configured in proxy.conf.json:
+# /api/* -> http://localhost:5000
+# /ai/* -> http://localhost:8000
+```
+
+**Docker Compose (full stack):**
+```bash
+# From repository root
+docker-compose up -d
+# Frontend: http://localhost:4200
+# Backend: http://localhost:5000
+# AI Service: http://localhost:8000
+```
+
+### Key Files for Reference
+
+| Purpose | File Path |
+|---------|-----------|
+| App configuration | `frontend/src/app/app.config.ts` |
+| Routes | `frontend/src/app/app.routes.ts` |
+| Main component | `frontend/src/app/app.ts` |
+| Domain models | `frontend/src/app/core/models/resume.model.ts` |
+| Resume service | `frontend/src/app/core/services/resume.service.ts` |
+| API interceptor | `frontend/src/app/core/interceptors/api.interceptor.ts` |
+| Dev environment | `frontend/src/environments/environment.ts` |
+| Prod environment | `frontend/src/environments/environment.prod.ts` |
+| Nginx config | `frontend/nginx.conf` |
+| Dockerfile | `frontend/Dockerfile` |
+| Proxy config (dev) | `frontend/proxy.conf.json` |
+| Package.json | `frontend/package.json` |
+| Angular config | `frontend/angular.json` |
 
 ---
 
@@ -361,6 +642,22 @@ except Exception as e:
 
 ---
 
-**Need more detail?** Tell me which area to expand (e.g., testing patterns, EF migrations, AI analyzer service, specific Terraform modules, CI/CD setup) and I'll update this file with concrete examples from the codebase.
+## Summary
 
-**Need more detail?** Tell me which area to expand (e.g., testing patterns, EF migrations, AI analyzer service, specific Terraform modules, CI/CD setup) and I'll update this file with concrete examples from the codebase.
+This monorepo contains three tightly integrated services:
+
+1. **Angular Frontend** (`frontend/`) - User interface with zoneless architecture
+2. **.NET Backend** (`backend/`) - Business logic with Clean Architecture + CQRS
+3. **Python AI Service** (`ai-service/`) - AI-powered resume analysis with GPT-4o
+
+**Development workflow:**
+- Local: Run each service independently or use docker-compose
+- Production: Multi-container deployment with nginx reverse proxy
+
+**Key principles:**
+- Frontend: Signals for state, standalone components, lazy loading
+- Backend: CQRS with MediatR, automatic validation, strict architecture layers
+- AI Service: FastAPI async, Agent Framework, Pydantic validation
+- All: Security-first (no secrets in code, input validation, error handling)
+
+**Need more detail?** Tell me which area to expand (e.g., testing patterns, EF migrations, Angular components, AI analyzer service, Terraform modules, CI/CD setup) and I'll provide concrete examples from the codebase.
