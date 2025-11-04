@@ -4,78 +4,188 @@ This project follows Clean Architecture (Domain / Application / Infrastructure /
 
 **🔐 IMPORTANT: Before making ANY changes, read `.github/security-guardrails.md` for security rules and best practices.**
 
-- Big picture
-  - Layers: Domain (entities/exceptions), Application (CQRS features, validators, behaviors), Infrastructure (EF Core DbContext, blob and AI services, KeyVault), API (controllers, middleware, Serilog).
-  - Entry point: `src/CVAnalyzer.API/Program.cs` — registers `AddApplication()` and `AddInfrastructure(configuration)` and configures Serilog, Swagger and CORS.
+### Architecture Overview
 
-- Where to implement features
-  - MediatR requests live under: `src/CVAnalyzer.Application/Features/*/Commands` and `.../Queries` (example: UploadResumeCommand & handler in `Features/Resumes/Commands`).
-  - Validators use FluentValidation and filename convention `*Validator.cs` next to the request (example: `UploadResumeCommandValidator.cs`). Validation is wired by `AddValidatorsFromAssembly` and a pipeline behavior `ValidationBehavior<,>` registered via `AddApplication()`.
-  - To add a new request/handler: create a record or class in `Application/Features/<Feature>/Commands` or `Queries`; name handler `XxxHandler` implementing `IRequestHandler<...>`; add validator if needed.
+- **Layer dependencies**: API → Infrastructure → Application → Domain (strict one-way). Domain has zero dependencies.
+- **Entry point**: `src/CVAnalyzer.API/Program.cs` — registers `AddApplication()` and `AddInfrastructure(configuration)`, configures Serilog (rolling file + console), Swagger, CORS "AllowAll", and global `ExceptionHandlingMiddleware`.
+- **Core entities**: `Resume` (blob URL, content, score, status) and `Suggestion` (category, priority) in `Domain/Entities`.
+- **Exception handling**: All unhandled exceptions are caught by `ExceptionHandlingMiddleware`, which transforms `ValidationException` to 400 BadRequest with structured error details.
 
-- Dependency injection patterns
-  - Application DI: `src/CVAnalyzer.Application/DependencyInjection.cs` — MediatR registration is automatic (RegisterServicesFromAssembly + pipeline behavior). No manual handler registration needed.
-  - Infrastructure DI: `src/CVAnalyzer.Infrastructure/DependencyInjection.cs` — typical place to register `IApplicationDbContext`, `IBlobStorageService`, `IAIResumeAnalyzerService`, DbContext, and Key Vault retrieval. If adding infrastructure services, extend this file.
-  - Key Vault: enabled when `UseKeyVault` is `true` in configuration; secret lookup uses `DefaultAzureCredential()` and expects a secret named `DatabaseConnectionString` (see `AddInfrastructure`).
+### Implementing New Features (CQRS Pattern)
 
-- Data access and patterns
-  - EF DbContext: `CVAnalyzer.Infrastructure.Persistence.ApplicationDbContext` (registered in Infrastructure DI). Use `IApplicationDbContext` from Application.Common.Interfaces in handlers.
-  - Use `.Include(...)` where needed (see `GetResumeByIdQueryHandler`). Follow existing patterns for entity navigation and suggestions.
+- **Request location**: `src/CVAnalyzer.Application/Features/<Feature>/Commands` (writes) or `.../Queries` (reads).
+  - Example: `UploadResumeCommand.cs` is a `record` implementing `IRequest<Guid>`.
+  - Pattern: `public record MyCommand(...) : IRequest<TResult>;`
+- **Handler**: Same folder, named `MyCommandHandler.cs` implementing `IRequestHandler<MyCommand, TResult>`.
+  - Inject `IApplicationDbContext` for DB access, `IBlobStorageService` for blob ops, `IAIResumeAnalyzerService` for AI analysis.
+  - Example: `UploadResumeCommandHandler` creates Resume entity, calls blob service, saves to DB.
+- **Validator**: Same folder, named `MyCommandValidator.cs` extending `AbstractValidator<MyCommand>`.
+  - Example: `UploadResumeCommandValidator` checks UserId not empty, FileName ≤255 chars, FileStream not null.
+  - Auto-discovered by `AddValidatorsFromAssembly` in `DependencyInjection.cs`.
+  - Validation executes automatically via `ValidationBehavior<,>` pipeline before handler runs; throws `ValidationException` on failure.
 
-- Controllers & endpoints
-  - Controllers are thin: `src/CVAnalyzer.API/Controllers/ResumesController.cs` delegates to MediatR. Follow pattern: validate inputs, create request object, call `_mediator.Send(...)`, return appropriate ActionResult (CreatedAtAction, Ok, NotFound).
-  - Health endpoint: `GET /api/health` implemented in `HealthController`.
+### Dependency Injection Patterns
 
-- Logging & config
-  - Serilog configured in `Program.cs` and uses `logs/cvanalyzer-.log` (rolling). Read logging settings from `appsettings.json`/`appsettings.Development.json`.
-  - Common config keys: `ConnectionStrings:DefaultConnection`, `UseKeyVault`, `KeyVault:Uri`.
+- **Application layer** (`src/CVAnalyzer.Application/DependencyInjection.cs`):
+  - `AddMediatR` with `RegisterServicesFromAssembly` — auto-discovers all handlers.
+  - `AddOpenBehavior(typeof(ValidationBehavior<,>))` — injects validation pipeline.
+  - `AddValidatorsFromAssembly` — auto-discovers all FluentValidation validators.
+  - **No manual handler registration needed** — just add files in correct namespace.
+- **Infrastructure layer** (`src/CVAnalyzer.Infrastructure/DependencyInjection.cs`):
+  - Registers `ApplicationDbContext` with SQL Server connection string (from config or Key Vault).
+  - Scopes: `IApplicationDbContext`, `IBlobStorageService`, `IAIResumeAnalyzerService`.
+  - **Key Vault**: When `UseKeyVault=true`, fetches `DatabaseConnectionString` secret via `DefaultAzureCredential`. Fallback to config on error (logs warning).
+  - **Local dev**: Set `UseKeyVault=false` and use `ConnectionStrings:DefaultConnection` from appsettings.
 
-- Build, run, test (developer workflows)
-  - Restore/build/run locally:
-    - `dotnet restore` (repo root)
-    - `dotnet build` (repo root)
-    - `cd src/CVAnalyzer.API` then `dotnet run` (API hosts on HTTPS; Swagger available in Development at `/swagger`).
-  - Tests: run `dotnet test` from solution root; unit tests under `tests/CVAnalyzer.UnitTests`, integration tests under `tests/CVAnalyzer.IntegrationTests`.
-  - Docker: `docker-compose up -d` (local stack). Dockerfile exists for production container.
+### Data Access and EF Core
 
-- Examples & quick copyable snippets
-  - Create a command handler skeleton:
-    - Request: `src/CVAnalyzer.Application/Features/<Feature>/Commands/MyCommand.cs` (record or class implementing `IRequest<T>`)
-    - Handler: `MyCommandHandler : IRequestHandler<MyCommand, T>` in same folder
-    - Validator: `MyCommandValidator : AbstractValidator<MyCommand>` in same folder
+- **DbContext**: `CVAnalyzer.Infrastructure.Persistence.ApplicationDbContext` implements `IApplicationDbContext`.
+  - Entities: `Resume`, `Suggestion` (1:N relationship).
+  - Always use `IApplicationDbContext` interface in handlers, not concrete type.
+- **Querying**: Use `.Include(r => r.Suggestions)` for navigation properties (see `GetResumeByIdQueryHandler.cs`).
+- **Migrations**: Run from solution root: `dotnet ef migrations add <Name> --project src/CVAnalyzer.Infrastructure --startup-project src/CVAnalyzer.API`.
+- **Connection strings**:
+  - Dev fallback: `Server=(localdb)\\mssqllocaldb;Database=CVAnalyzerDb;Trusted_Connection=True;MultipleActiveResultSets=true`
+  - Docker: `Server=sqlserver;Database=CVAnalyzerDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True`
 
-- Integration notes & common pitfalls
-  - MediatR auto-registration means moving files is safe as long as they remain in the Application assembly.
-  - When enabling Key Vault, app startup will attempt to fetch `DatabaseConnectionString` via `SecretClient` with `DefaultAzureCredential` — ensure environment provides credentials (or disable `UseKeyVault` during local dev).
-  - Blob storage and AI analyzer interfaces are registered in Infrastructure DI — inspect `IBlobStorageService` and `IAIResumeAnalyzerService` implementations before changing behavior.
+### Controllers & API Endpoints
 
-- Azure MCP integration (GitHub Copilot coding agent)
-  - This repo has Azure MCP server configured for GitHub Copilot coding agent integration.
-  - Copilot can now query Azure resources, check deployment status, and suggest infrastructure improvements.
-  - Managed identity `mi-copilot-coding-agent` provides secure, passwordless access to Azure resources with Reader permissions.
-  - Use natural language with Copilot: "Show me my App Service configuration" or "Check the status of my SQL database".
+- **Controller pattern**: Thin controllers delegate to MediatR (`src/CVAnalyzer.API/Controllers/ResumesController.cs`).
+  - Validate inputs, create request object, call `_mediator.Send(...)`, return ActionResult.
+  - Example: `Upload` method accepts `IFormFile`, creates `UploadResumeCommand` with `file.OpenReadStream()`, returns `CreatedAtAction`.
+- **Health endpoint**: `GET /api/health` via `HealthController` (also mapped in Program.cs with `MapHealthChecks("/health")`).
+- **Error responses**: `ExceptionHandlingMiddleware` transforms exceptions:
+  - `ValidationException` → 400 with `{ message, statusCode, errors: [{PropertyName, ErrorMessage}] }`
+  - Domain exceptions (if added) → handle similarly in middleware switch statement.
 
-- Infrastructure as Code (Terraform)
-  - Azure infrastructure is managed via Terraform in `terraform/` directory.
-  - Three environments supported: dev, test, prod (use `environments/dev.tfvars`, etc.).
-  - Resources follow naming convention: `{resource-type}-cvanalyzer-{environment}` (e.g., `app-cvanalyzer-dev`, `sql-cvanalyzer-dev`).
-  - Deploy: `terraform plan -var-file="environments/dev.tfvars"` then `terraform apply -var-file="environments/dev.tfvars"`.
-  - Each environment creates: Resource Group, Key Vault, SQL Server + Database, App Service Plan + Web App, and access policies.
-  - SQL password must be set via environment variable: `$env:TF_VAR_sql_admin_password = "YourPassword"` (PowerShell) or `export TF_VAR_sql_admin_password="YourPassword"` (Bash).
-  - See `terraform/README.md` for deployment instructions and `.github/terraform-instructions.md` for Terraform best practices.
-  - KISS principle: modules are simple and focused (app-service, key-vault, sql-database). Avoid circular dependencies.
-  - State management: currently using local state; for team collaboration, use Azure Storage backend (see terraform-instructions.md).
+### Logging & Configuration
 
-- Files to consult for examples
-  - `src/CVAnalyzer.API/Program.cs` — host, Serilog, Swagger, CORS, health checks
-  - `src/CVAnalyzer.Application/DependencyInjection.cs` — MediatR + validation behavior
-  - `src/CVAnalyzer.Infrastructure/DependencyInjection.cs` — DbContext, KeyVault, service registrations
-  - `src/CVAnalyzer.Application/Features/Resumes/*` — canonical example of command/query/validator/handler
-  - `src/CVAnalyzer.API/Controllers/ResumesController.cs` — controller → MediatR usage
+- **Serilog**: Configured in `Program.cs` with `ReadFrom.Configuration`.
+  - Console + rolling file: `logs/cvanalyzer-.log` (daily).
+  - Use `ILogger<T>` injection in handlers/controllers; avoid static `Log.Logger` except startup/shutdown.
+- **Config keys**:
+  - `ConnectionStrings:DefaultConnection` — SQL connection string.
+  - `UseKeyVault` (true/false) — enable Azure Key Vault secret retrieval.
+  - `KeyVault:Uri` — Key Vault endpoint (e.g., `https://kv-cvanalyzer-dev.vault.azure.net/`).
+  - Serilog settings in `appsettings.json` / `appsettings.Development.json`.
 
-- Security & compliance resources
-  - `.github/security-guardrails.md` — **READ THIS FIRST** - Security rules, best practices, and guardrails for all code changes
-  - `SECURITY_REVIEW.md` — Comprehensive security review results and recommendations
-  - `CODE_REVIEW_SUMMARY.md` — Summary of security fixes and improvements applied
 
-If any of these files or behaviors are out-of-date or you want additional examples (e.g., tests, EF migrations, or the AI analyzer implementation), tell me which area to expand and I will update the instructions.
+### Build, Run & Test Workflows
+
+**Local development:**
+1. Restore dependencies: `dotnet restore` (solution root)
+2. Build solution: `dotnet build`
+3. Run API: `cd src/CVAnalyzer.API` → `dotnet run`
+   - API hosts on HTTPS (port varies, check console output)
+   - Swagger UI: `https://localhost:<port>/swagger` (Development only)
+   - Uses LocalDB by default: `(localdb)\\mssqllocaldb`
+
+**Docker deployment:**
+- Local stack: `docker-compose up -d` (runs API + SQL Server 2022)
+  - API: `http://localhost:5000`
+  - SQL: `localhost:1433` (sa/YourStrong@Passw0rd)
+  - Volume: `sqlserver-data` for persistence
+- Production: `docker build -f Dockerfile -t cvanalyzer-api .`
+
+**Testing:**
+- Run all tests: `dotnet test` (solution root)
+- Unit tests: `tests/CVAnalyzer.UnitTests` (5 tests currently)
+- Integration tests: `tests/CVAnalyzer.IntegrationTests` (1 test currently)
+- Test frameworks: xUnit, FluentAssertions, NSubstitute
+
+**Database migrations:**
+- Add migration: `dotnet ef migrations add <MigrationName> --project src/CVAnalyzer.Infrastructure --startup-project src/CVAnalyzer.API`
+- Update database: `dotnet ef database update --project src/CVAnalyzer.Infrastructure --startup-project src/CVAnalyzer.API`
+
+### Infrastructure as Code (Terraform)
+
+- **Location**: `terraform/` directory with modular structure.
+- **Environments**: dev, test, prod — use `terraform apply -var-file="environments/<env>.tfvars"`.
+- **Naming convention**: `{resource-type}-cvanalyzer-{environment}` (e.g., `app-cvanalyzer-dev`, `sql-cvanalyzer-dev`, `kv-cvanalyzer-dev`).
+- **Resources per environment**:
+  - Resource Group
+  - App Service Plan + Linux Web App (Docker container)
+  - SQL Server + Database
+  - Key Vault (stores DB connection string)
+  - Managed Identity for Copilot (`mi-copilot-coding-agent` with Reader permissions)
+- **SQL password**: Must set `TF_VAR_sql_admin_password` env var before apply (never commit!).
+  - PowerShell: `$env:TF_VAR_sql_admin_password = "YourPassword"`
+  - Bash: `export TF_VAR_sql_admin_password="YourPassword"`
+- **Modules**: `app-service/`, `key-vault/`, `sql-database/` — simple, focused, no circular dependencies (KISS principle).
+- **State management**: Currently local; for teams use Azure Storage backend (see `terraform-instructions.md`).
+
+### Azure MCP Integration (GitHub Copilot)
+
+- **Purpose**: Copilot coding agent can query Azure resources, check deployment status, suggest infrastructure improvements.
+- **Managed Identity**: `mi-copilot-coding-agent` provides passwordless access with Reader permissions.
+- **Usage**: Natural language queries like "Show me my App Service configuration" or "Check SQL database status".
+
+
+### Common Patterns & Pitfalls
+
+**Quick snippets:**
+```csharp
+// New command request (record preferred)
+public record MyCommand(string Param1, int Param2) : IRequest<Guid>;
+
+// Handler skeleton
+public class MyCommandHandler : IRequestHandler<MyCommand, Guid>
+{
+    private readonly IApplicationDbContext _context;
+    public MyCommandHandler(IApplicationDbContext context) => _context = context;
+    
+    public async Task<Guid> Handle(MyCommand request, CancellationToken ct)
+    {
+        // Implementation
+        await _context.SaveChangesAsync(ct);
+        return entityId;
+    }
+}
+
+// Validator
+public class MyCommandValidator : AbstractValidator<MyCommand>
+{
+    public MyCommandValidator()
+    {
+        RuleFor(x => x.Param1).NotEmpty().MaximumLength(255);
+        RuleFor(x => x.Param2).GreaterThan(0);
+    }
+}
+```
+
+**Common pitfalls:**
+- **Key Vault credentials**: When `UseKeyVault=true`, ensure Azure credentials available (Azure CLI login, managed identity, or environment vars). For local dev, set `UseKeyVault=false`.
+- **MediatR discovery**: Moving handler files is safe as long as they stay in `CVAnalyzer.Application` assembly. Namespace changes don't break auto-registration.
+- **EF includes**: Missing `.Include()` causes null navigation properties. Check `GetResumeByIdQueryHandler` for pattern.
+- **Stream disposal**: When passing `Stream` to commands (like `UploadResumeCommand`), handler is responsible for disposal or must consume before disposal.
+- **Validation timing**: FluentValidation runs BEFORE handler via pipeline behavior; no need to manually validate in handlers.
+
+### Key Files for Reference
+
+| Purpose | File Path |
+|---------|-----------|
+| MediatR + validation setup | `src/CVAnalyzer.Application/DependencyInjection.cs` |
+| DbContext + Key Vault | `src/CVAnalyzer.Infrastructure/DependencyInjection.cs` |
+| Command example | `src/CVAnalyzer.Application/Features/Resumes/Commands/UploadResumeCommand.cs` |
+| Query with includes | `src/CVAnalyzer.Application/Features/Resumes/Queries/GetResumeByIdQueryHandler.cs` |
+| Validator example | `src/CVAnalyzer.Application/Features/Resumes/Commands/UploadResumeCommandValidator.cs` |
+| Controller pattern | `src/CVAnalyzer.API/Controllers/ResumesController.cs` |
+| Global exception handling | `src/CVAnalyzer.API/Middleware/ExceptionHandlingMiddleware.cs` |
+| Validation pipeline | `src/CVAnalyzer.Application/Behaviors/ValidationBehavior.cs` |
+| Startup configuration | `src/CVAnalyzer.API/Program.cs` |
+| Terraform module example | `terraform/modules/app-service/main.tf` |
+
+### Security & Compliance
+
+- **Primary resource**: `.github/security-guardrails.md` — **READ BEFORE ANY CODE CHANGES**.
+- **Review summary**: `SECURITY_REVIEW.md` — comprehensive security audit results.
+- **Code review**: `CODE_REVIEW_SUMMARY.md` — security fixes applied.
+- **Key principles**:
+  - Never commit secrets (use Key Vault or env vars)
+  - Validate all inputs (FluentValidation)
+  - Use parameterized queries (EF Core handles this)
+  - Log errors but sanitize sensitive data
+
+---
+
+**Need more detail?** Tell me which area to expand (e.g., testing patterns, EF migrations, AI analyzer service, specific Terraform modules, CI/CD setup) and I'll update this file with concrete examples from the codebase.
