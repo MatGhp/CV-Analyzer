@@ -25,7 +25,7 @@ resource "azurerm_container_app" "frontend" {
     for_each = var.acr_login_server != "" ? [1] : []
     content {
       server   = var.acr_login_server
-      identity = azurerm_container_app.frontend.identity[0].principal_id
+      identity = "system"
     }
   }
 
@@ -74,7 +74,7 @@ resource "azurerm_container_app" "api" {
     for_each = var.acr_login_server != "" ? [1] : []
     content {
       server   = var.acr_login_server
-      identity = azurerm_container_app.api.identity[0].principal_id
+      identity = "system"
     }
   }
 

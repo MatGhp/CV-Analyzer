@@ -2,7 +2,7 @@ name: Application Deployment
 
 on:
   workflow_run:
-    workflows: ["CI Build and Test"]
+    workflows: ["CI Build and Test", "Infrastructure Deploy"]
     types:
       - completed
     branches: [ main ]
