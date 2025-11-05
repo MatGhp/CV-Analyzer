@@ -57,10 +57,8 @@ module "container_apps" {
   location            = azurerm_resource_group.main.location
   environment         = var.environment
 
-  # Docker images - using placeholder until we build and push actual images
-  # frontend_image   = "${module.acr.login_server}/cvanalyzer-frontend:${var.image_tag}"
-  # api_image        = "${module.acr.login_server}/cvanalyzer-api:${var.image_tag}"
-  # ai_service_image = "${module.acr.login_server}/cvanalyzer-ai:${var.image_tag}"
+  # ACR configuration
+  acr_login_server = module.acr.login_server
 
   # Configuration
   sql_connection_string = module.sql_database.connection_string

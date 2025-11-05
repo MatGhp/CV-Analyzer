@@ -67,6 +67,12 @@ variable "sql_connection_string" {
   sensitive   = true
 }
 
+variable "acr_login_server" {
+  description = "Azure Container Registry login server"
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Resource tags"
   type        = map(string)

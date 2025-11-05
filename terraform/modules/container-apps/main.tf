@@ -21,6 +21,14 @@ resource "azurerm_container_app" "frontend" {
     type = "SystemAssigned"
   }
 
+  dynamic "registry" {
+    for_each = var.acr_login_server != "" ? [1] : []
+    content {
+      server   = var.acr_login_server
+      identity = azurerm_container_app.frontend.identity[0].principal_id
+    }
+  }
+
   template {
     min_replicas = var.min_replicas
     max_replicas = var.max_replicas
@@ -60,6 +68,14 @@ resource "azurerm_container_app" "api" {
 
   identity {
     type = "SystemAssigned"
+  }
+
+  dynamic "registry" {
+    for_each = var.acr_login_server != "" ? [1] : []
+    content {
+      server   = var.acr_login_server
+      identity = azurerm_container_app.api.identity[0].principal_id
+    }
   }
 
   template {
