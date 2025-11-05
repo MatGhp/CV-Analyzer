@@ -85,8 +85,17 @@ jobs:
         
         # Simple health check with 3 retries
         for i in 1 2 3; do
-          API_OK=$(curl -sf "https://$API_URL/api/health" && echo "OK" || echo "FAIL")
-          FRONTEND_OK=$(curl -sf "https://$FRONTEND_URL" && echo "OK" || echo "FAIL")
+          if curl -sf "https://$API_URL/api/health" > /dev/null; then
+            API_OK="OK"
+          else
+            API_OK="FAIL"
+          fi
+          
+          if curl -sf "https://$FRONTEND_URL" > /dev/null; then
+            FRONTEND_OK="OK"
+          else
+            FRONTEND_OK="FAIL"
+          fi
           
           if [ "$API_OK" == "OK" ] && [ "$FRONTEND_OK" == "OK" ]; then
             echo "[PASS] All health checks passed"
