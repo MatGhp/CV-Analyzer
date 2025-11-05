@@ -85,15 +85,9 @@ resource "azurerm_role_assignment" "acr_pull_api" {
   principal_id         = module.container_apps.api_identity_principal_id
 }
 
-resource "azurerm_role_assignment" "acr_pull_ai" {
-  scope                = module.acr.id
-  role_definition_name = "AcrPull"
-  principal_id         = module.container_apps.ai_service_identity_principal_id
-}
-
-# Grant AI Service access to AI Foundry
-resource "azurerm_role_assignment" "ai_service_foundry_access" {
+# Grant API access to AI Foundry (since AI is now integrated into API)
+resource "azurerm_role_assignment" "api_foundry_access" {
   scope                = module.ai_foundry.id
   role_definition_name = "Cognitive Services User"
-  principal_id         = module.container_apps.ai_service_identity_principal_id
+  principal_id         = module.container_apps.api_identity_principal_id
 }

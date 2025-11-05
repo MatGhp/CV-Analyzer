@@ -29,8 +29,3 @@ output "api_identity_principal_id" {
   description = "API managed identity principal ID"
   value       = azurerm_container_app.api.identity[0].principal_id
 }
-
-output "ai_service_identity_principal_id" {
-  description = "AI Service managed identity principal ID"
-  value       = azurerm_container_app.ai_service.identity[0].principal_id
-}

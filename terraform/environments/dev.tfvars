@@ -1,15 +1,16 @@
 # Development Environment Configuration
 
+# Resource Location
 environment = "dev"
 location    = "swedencentral"
 
 # SQL Configuration
-# SECURITY: Use non-standard usernames and strong passwords
-# Password must be set via: $env:TF_VAR_sql_admin_password = "YourSecurePassword123!"
-sql_admin_username = "cvadmin_dev" # Avoid common names like 'admin', 'sa', 'sqladmin'
+sql_admin_username = "cvadmin_dev"  # Non-standard username for security
+# Note: SQL admin password must be set via environment variable:
+# $env:TF_VAR_sql_admin_password = "YourSecurePassword123!"
 
 # Container Registry Configuration
-acr_sku = "Basic" # Basic SKU for dev environment
+acr_sku = "Basic"  # Basic SKU for dev environment
 
 # Container Apps Configuration
 min_replicas = 0 # Enable scale-to-zero for cost savings in dev

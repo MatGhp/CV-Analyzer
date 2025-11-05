@@ -9,7 +9,6 @@ services:
       - "443:443"
     depends_on:
       - api
-      - ai-service
     networks:
       - cvanalyzer-network
     restart: unless-stopped
@@ -27,30 +26,13 @@ services:
       - ConnectionStrings__DefaultConnection=${SQL_CONNECTION_STRING}
       - UseKeyVault=true
       - KeyVault__Uri=${KEY_VAULT_URI}
-      - AIService__BaseUrl=http://ai-service:8000
-    depends_on:
-      - ai-service
+      - Agent__Endpoint=${AI_FOUNDRY_ENDPOINT}
+      - Agent__Deployment=${MODEL_DEPLOYMENT_NAME:-gpt-4o}
+      - Agent__Temperature=0.7
+      - Agent__TopP=0.95
     networks:
       - cvanalyzer-network
     restart: unless-stopped
-
-  ai-service:
-    image: ${ACR_NAME}.azurecr.io/cv-analyzer-ai:${IMAGE_TAG:-latest}
-    environment:
-      - AI_FOUNDRY_ENDPOINT=${AI_FOUNDRY_ENDPOINT}
-      - MODEL_DEPLOYMENT_NAME=${MODEL_DEPLOYMENT_NAME:-gpt-4o}
-      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
-      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
-      - LOG_LEVEL=WARNING
-    networks:
-      - cvanalyzer-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
 networks:
   cvanalyzer-network:

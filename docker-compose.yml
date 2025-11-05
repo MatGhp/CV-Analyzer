@@ -7,7 +7,6 @@ services:
       - "4200:80"
     depends_on:
       - api
-      - ai-service
     networks:
       - cvanalyzer-network
     healthcheck:
@@ -27,34 +26,17 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=CVAnalyzerDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True
       - UseKeyVault=false
-      - AIService__BaseUrl=http://ai-service:8000
-    depends_on:
-      - sqlserver
-      - ai-service
-    networks:
-      - cvanalyzer-network
-
-  ai-service:
-    build:
-      context: ./ai-service
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - AI_FOUNDRY_ENDPOINT=${AI_FOUNDRY_ENDPOINT}
-      - MODEL_DEPLOYMENT_NAME=${MODEL_DEPLOYMENT_NAME:-gpt-4o}
+      - Agent__Endpoint=${AI_FOUNDRY_ENDPOINT}
+      - Agent__Deployment=${MODEL_DEPLOYMENT_NAME:-gpt-4o}
+      - Agent__Temperature=0.7
+      - Agent__TopP=0.95
       - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
       - AZURE_TENANT_ID=${AZURE_TENANT_ID}
       - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
-      - LOG_LEVEL=INFO
+    depends_on:
+      - sqlserver
     networks:
       - cvanalyzer-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest

@@ -28,14 +28,20 @@ resource "azurerm_container_app" "frontend" {
     container {
       name   = "frontend"
       image  = var.frontend_image
-      cpu    = 0.25
-      memory = "0.5Gi"
+      cpu    = "0.5"
+      memory = "1.0Gi"
+
+      env {
+        name  = "NGINX_PORT"
+        value = "80"
+      }
     }
   }
 
   ingress {
-    external_enabled = true
-    target_port      = 80
+    target_port              = 80
+    external_enabled         = true
+    allow_insecure_connections = false
     traffic_weight {
       latest_revision = true
       percentage      = 100
@@ -63,8 +69,8 @@ resource "azurerm_container_app" "api" {
     container {
       name   = "api"
       image  = var.api_image
-      cpu    = 0.5
-      memory = "1Gi"
+      cpu    = "1.0"
+      memory = "2.0Gi"
 
       env {
         name  = "ASPNETCORE_ENVIRONMENT"
@@ -78,71 +84,34 @@ resource "azurerm_container_app" "api" {
 
       env {
         name  = "UseKeyVault"
-        value = "false"
+        value = "true"
       }
 
       env {
-        name  = "AIService__BaseUrl"
-        value = "https://${azurerm_container_app.ai_service.ingress[0].fqdn}"
-      }
-    }
-  }
-
-  ingress {
-    external_enabled = true
-    target_port      = 8080
-    traffic_weight {
-      latest_revision = true
-      percentage      = 100
-    }
-  }
-
-  tags = var.tags
-
-  depends_on = [azurerm_container_app.ai_service]
-}
-
-# AI Service Container App (Python FastAPI)
-resource "azurerm_container_app" "ai_service" {
-  name                         = "${var.app_name_prefix}-ai-service"
-  resource_group_name          = var.resource_group_name
-  container_app_environment_id = azurerm_container_app_environment.env.id
-  revision_mode                = "Single"
-
-  identity {
-    type = "SystemAssigned"
-  }
-
-  template {
-    min_replicas = var.min_replicas
-    max_replicas = var.max_replicas
-
-    container {
-      name   = "ai-service"
-      image  = var.ai_service_image
-      cpu    = 0.5
-      memory = "1Gi"
-
-      env {
-        name  = "AI_FOUNDRY_ENDPOINT"
+        name  = "Agent__Endpoint"
         value = var.ai_foundry_endpoint
       }
 
       env {
-        name  = "MODEL_DEPLOYMENT_NAME"
+        name  = "Agent__Deployment"
         value = var.model_deployment_name
       }
 
       env {
-        name  = "LOG_LEVEL"
-        value = "INFO"
+        name  = "Agent__Temperature"
+        value = "0.7"
+      }
+
+      env {
+        name  = "Agent__TopP"
+        value = "0.95"
       }
     }
   }
 
   ingress {
-    external_enabled = false
-    target_port      = 8000
+    target_port      = 8080
+    external_enabled = true
     traffic_weight {
       latest_revision = true
       percentage      = 100

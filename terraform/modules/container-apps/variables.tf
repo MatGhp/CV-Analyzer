@@ -50,27 +50,21 @@ variable "api_image" {
   default     = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
 }
 
-variable "ai_service_image" {
-  description = "AI Service container image (e.g., acr.azurecr.io/ai-service:latest)"
-  type        = string
-  default     = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
-}
-
-variable "sql_connection_string" {
-  description = "SQL Server connection string"
-  type        = string
-  sensitive   = true
-}
-
 variable "ai_foundry_endpoint" {
   description = "Azure AI Foundry endpoint URL"
   type        = string
 }
 
 variable "model_deployment_name" {
-  description = "AI model deployment name (e.g., gpt-4o)"
+  description = "Azure AI Foundry model deployment name"
   type        = string
   default     = "gpt-4o"
+}
+
+variable "sql_connection_string" {
+  description = "SQL Server connection string"
+  type        = string
+  sensitive   = true
 }
 
 variable "tags" {
