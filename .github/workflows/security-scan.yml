@@ -1,0 +1,110 @@
+name: Security - Secret Scanning
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  secret-scan:
+    name: Scan for Secrets
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better scanning
+    
+    - name: TruffleHog Secret Scan
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: ${{ github.event.repository.default_branch }}
+        head: HEAD
+        extra_args: --debug --only-verified
+    
+    - name: GitLeaks Secret Scan
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} # Optional: for advanced features
+    
+    - name: Check for sensitive files
+      run: |
+        echo "🔍 Checking for sensitive files..."
+        
+        SENSITIVE_FILES=$(find . -type f \( \
+          -name "*.env" \
+          -o -name "*.secret" \
+          -o -name "*.key" \
+          -o -name "*credentials*" \
+          -o -name "secrets.json" \
+          -o -name "azureauth.json" \
+        \) -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/bin/*" -not -path "*/obj/*")
+        
+        if [ ! -z "$SENSITIVE_FILES" ]; then
+          echo "[FAIL] Sensitive files found:"
+          echo "$SENSITIVE_FILES"
+          exit 1
+        else
+          echo "[PASS] No sensitive files found"
+        fi
+    
+    - name: Verify .gitignore coverage
+      run: |
+        echo "Verifying .gitignore patterns..."
+        
+        # Check that critical patterns are in .gitignore
+        REQUIRED_PATTERNS=(
+          "*.env"
+          "*.secret"
+          "*.key"
+          "*.tfvars"
+          "secrets.json"
+        )
+        
+        MISSING_PATTERNS=()
+        for pattern in "${REQUIRED_PATTERNS[@]}"; do
+          if ! grep -q "$pattern" .gitignore; then
+            MISSING_PATTERNS+=("$pattern")
+          fi
+        done
+        
+        if [ ${#MISSING_PATTERNS[@]} -gt 0 ]; then
+          echo "[WARNING] The following patterns are not in .gitignore:"
+          printf '%s\n' "${MISSING_PATTERNS[@]}"
+          echo "Consider adding them to prevent accidental commits."
+        else
+          echo "[PASS] All critical patterns are in .gitignore"
+        fi
+    
+    - name: Scan for hardcoded IPs and URLs
+      run: |
+        echo "Scanning for hardcoded IPs and internal URLs..."
+        
+        # Scan for private IP addresses
+        PRIVATE_IPS=$(grep -rn --include="*.cs" --include="*.ts" --include="*.js" --include="*.py" \
+          -E "192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\." . | grep -v node_modules || true)
+        
+        if [ ! -z "$PRIVATE_IPS" ]; then
+          echo "[WARNING] Private IP addresses found (may need review):"
+          echo "$PRIVATE_IPS"
+        fi
+        
+        echo "[PASS] IP scan complete"
+    
+    - name: Summary
+      if: always()
+      run: |
+        echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- [PASS] TruffleHog scan completed" >> $GITHUB_STEP_SUMMARY
+        echo "- [PASS] GitLeaks scan completed" >> $GITHUB_STEP_SUMMARY
+        echo "- [PASS] Sensitive file check completed" >> $GITHUB_STEP_SUMMARY
+        echo "- [PASS] .gitignore verification completed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY

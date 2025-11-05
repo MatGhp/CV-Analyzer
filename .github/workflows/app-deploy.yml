@@ -1,0 +1,124 @@
+name: Application Deployment
+
+on:
+  workflow_run:
+    workflows: ["CI Build and Test"]
+    types:
+      - completed
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - test
+          - prod
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    env:
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+      ACR_NAME: acrcvanalyzer${{ github.event.inputs.environment || 'dev' }}
+      RESOURCE_GROUP: rg-cvanalyzer-${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: ACR Login
+      run: |
+        az acr login --name ${{ env.ACR_NAME }}
+
+    - name: Build and Push Images
+      run: |
+        # Build and push in parallel
+        docker build -t ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-api:${{ github.sha }} ./backend &
+        docker build -t ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-frontend:${{ github.sha }} ./frontend &
+        wait
+        
+        # Push images
+        docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-api:${{ github.sha }} &
+        docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-frontend:${{ github.sha }} &
+        wait
+
+    - name: Update Container Apps
+      run: |
+        # Update both apps in parallel
+        az containerapp update \
+          --name ca-cvanalyzer-api \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --image ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-api:${{ github.sha }} &
+        
+        az containerapp update \
+          --name ca-cvanalyzer-frontend \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --image ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-frontend:${{ github.sha }} &
+        
+        wait
+
+    - name: Health Check
+      run: |
+        echo "Waiting for deployment to stabilize..."
+        sleep 30
+        
+        API_URL=$(az containerapp show --name ca-cvanalyzer-api --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+        FRONTEND_URL=$(az containerapp show --name ca-cvanalyzer-frontend --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+        
+        echo "Checking API: https://$API_URL/api/health"
+        echo "Checking Frontend: https://$FRONTEND_URL"
+        
+        # Simple health check with 3 retries
+        for i in 1 2 3; do
+          API_OK=$(curl -sf "https://$API_URL/api/health" && echo "OK" || echo "FAIL")
+          FRONTEND_OK=$(curl -sf "https://$FRONTEND_URL" && echo "OK" || echo "FAIL")
+          
+          if [ "$API_OK" == "OK" ] && [ "$FRONTEND_OK" == "OK" ]; then
+            echo "[PASS] All health checks passed"
+            echo "API_URL=$API_URL" >> $GITHUB_ENV
+            echo "FRONTEND_URL=$FRONTEND_URL" >> $GITHUB_ENV
+            exit 0
+          fi
+          
+          echo "Retry $i: API=$API_OK, Frontend=$FRONTEND_OK"
+          sleep 10
+        done
+        
+        echo "[FAIL] Health checks failed after 3 attempts"
+        exit 1
+
+    - name: Deployment Summary
+      if: always()
+      run: |
+        echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Environment:** ${{ env.ENVIRONMENT }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Git SHA:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "**Result:** Deployment successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed URLs:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: https://$FRONTEND_URL" >> $GITHUB_STEP_SUMMARY
+          echo "- API: https://$API_URL" >> $GITHUB_STEP_SUMMARY
+          echo "- API Health: https://$API_URL/api/health" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "**Result:** Deployment failed" >> $GITHUB_STEP_SUMMARY
+        fi

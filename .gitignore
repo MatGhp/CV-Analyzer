@@ -5,8 +5,37 @@
 # Environment Variables & Secrets
 # ============================================
 .env
-.env.local
+.env.*
+!.env.example
 *.secrets.json
+*.secret
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Azure credentials
+*.publishsettings
+azureauth.json
+azure-credentials.json
+
+# GitHub secrets (if accidentally saved locally)
+github-secrets.json
+secrets.yml
+credentials.json
+
+# SSH keys
+id_rsa
+id_dsa
+id_ed25519
+*.pub
+
+# AWS credentials (if using multi-cloud)
+.aws/credentials
+
+# Service account keys
+*-service-account.json
+sa-key-*.json
 
 # ============================================
 # .NET Backend

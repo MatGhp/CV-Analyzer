@@ -1,0 +1,85 @@
+name: CI Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  NODE_VERSION: '20.x'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        cache: true
+        cache-dependency-path: '**/packages.lock.json'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: 'frontend/package-lock.json'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Backend - Restore dependencies
+      run: dotnet restore
+      working-directory: backend
+
+    - name: Backend - Build
+      run: dotnet build --no-restore --configuration Release
+      working-directory: backend
+
+    - name: Backend - Test
+      run: dotnet test --no-build --verbosity normal --configuration Release
+      working-directory: backend
+
+    - name: Backend - Publish
+      run: dotnet publish src/CVAnalyzer.API/CVAnalyzer.API.csproj --configuration Release --no-build --output ./publish
+      working-directory: backend
+
+    - name: Frontend - Install dependencies
+      run: npm ci
+      working-directory: frontend
+
+    - name: Frontend - Build
+      run: npm run build -- --configuration=production
+      working-directory: frontend
+
+    - name: Frontend - Test
+      run: npm test -- --watch=false --browsers=ChromeHeadless
+      working-directory: frontend
+
+    - name: Upload backend artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-artifacts
+        path: backend/publish/
+        retention-days: 7
+
+    - name: Upload frontend artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-artifacts
+        path: frontend/dist/cv-analyzer-frontend/browser/
+        retention-days: 7
