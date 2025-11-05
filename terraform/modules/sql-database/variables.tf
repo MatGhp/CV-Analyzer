@@ -25,7 +25,3 @@ variable "admin_password" {
   sensitive   = true
 }
 
-variable "key_vault_id" {
-  description = "ID of the Key Vault to store connection string"
-  type        = string
-}

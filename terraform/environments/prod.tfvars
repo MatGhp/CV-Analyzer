@@ -7,3 +7,18 @@ location    = "germanywestcentral"
 # SECURITY: Use non-standard usernames and strong passwords
 # Password must be set via: $env:TF_VAR_sql_admin_password = "YourSecurePassword123!"
 sql_admin_username = "cvadmin_prod" # Avoid common names like 'admin', 'sa', 'sqladmin'
+
+# Container Registry Configuration
+acr_sku = "Standard" # Standard SKU for better performance and geo-replication in prod
+
+# Container Apps Configuration
+min_replicas = 1  # Always-on for production
+max_replicas = 10 # Higher capacity for production load
+
+# AI Configuration
+model_deployment_name = "gpt-4o"
+model_capacity        = 30 # 30k tokens/min for production
+
+# Docker Image Configuration
+image_tag = "latest" # Use specific version tags in production (e.g., "v1.0.0")
+

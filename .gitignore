@@ -112,6 +112,8 @@ frontend/coverage/
 *.tfvars
 !terraform.tfvars.example
 !**/environments/*.tfvars
+tfplan
+*.tfplan
 crash.log
 crash.*.log
 override.tf
