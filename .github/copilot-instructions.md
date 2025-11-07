@@ -334,7 +334,7 @@ This service follows Clean Architecture (Domain / Application / Infrastructure /
 - **Migrations**: Run from backend directory: `dotnet ef migrations add <Name> --project src/CVAnalyzer.Infrastructure --startup-project src/CVAnalyzer.API`.
 - **Connection strings**:
   - Dev fallback: `Server=(localdb)\\mssqllocaldb;Database=CVAnalyzerDb;Trusted_Connection=True;MultipleActiveResultSets=true`
-  - Docker: `Server=sqlserver;Database=CVAnalyzerDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True`
+  - Docker: `Server=sqlserver;Database=CVAnalyzerDb;User Id=sa;Password=<PASSWORD_PLACEHOLDER>;TrustServerCertificate=True`
 
 ### Controllers & API Endpoints
 
@@ -373,7 +373,7 @@ This service follows Clean Architecture (Domain / Application / Infrastructure /
 - Local stack: `docker-compose up -d` (from repository root - runs .NET API + Python AI Service + SQL Server)
   - .NET API: `http://localhost:5000`
   - Python AI: `http://localhost:8000`
-  - SQL: `localhost:1433` (sa/YourStrong@Passw0rd)
+  - SQL: `localhost:1433` (sa/<PASSWORD_PLACEHOLDER>)
   - Volume: `sqlserver-data` for persistence
 - Production: `docker build -f Dockerfile -t cvanalyzer-api .` (from backend/ directory)
 

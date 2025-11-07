@@ -44,10 +44,9 @@ docker-compose build
 docker-compose up -d
 ```
 
-This starts 4 services:
+This starts 3 services:
 - **Frontend** (Angular) → `http://localhost:4200`
-- **Backend** (.NET API) → `http://localhost:5000`
-- **AI Service** (Python) → `http://localhost:8000`
+- **Backend** (.NET API + AgentService) → `http://localhost:5000`
 - **SQL Server** → `localhost:1433`
 
 ## Step 4: Verify Services
@@ -71,7 +70,7 @@ sqlserver           Up             0.0.0.0:1433->1433/tcp
 
 - **Frontend**: http://localhost:4200
 - **API Documentation**: http://localhost:5000/swagger
-- **AI Service Docs**: http://localhost:8000/docs
+ 
 
 ## Common Commands
 
@@ -82,7 +81,6 @@ docker-compose logs -f
 # View specific service logs
 docker-compose logs -f frontend
 docker-compose logs -f api
-docker-compose logs -f ai-service
 
 # Stop all services
 docker-compose down
@@ -115,17 +113,12 @@ Use the PowerShell script for easier management:
 
 ## Troubleshooting
 
-### AI Service fails to start
+### Agent calls fail
 
-Check Azure credentials in `.env`:
+Check API logs and Agent configuration in `appsettings.*.json`:
 ```bash
-docker-compose logs ai-service
+docker-compose logs api
 ```
-
-Common issues:
-- Invalid `AI_FOUNDRY_ENDPOINT`
-- Incorrect `AZURE_CLIENT_ID/SECRET/TENANT_ID`
-- GPT-4o model not deployed
 
 ### Database connection errors
 
@@ -143,7 +136,6 @@ docker-compose logs api | grep "Connection"
 
 Verify nginx proxy configuration in `frontend/nginx.conf`:
 - API proxy: `/api/` → `http://api:8080/api/`
-- AI proxy: `/ai/` → `http://ai-service:8000/`
 
 ### Port conflicts
 
@@ -173,15 +165,7 @@ dotnet run --project src/CVAnalyzer.API
 # Access at http://localhost:5000
 ```
 
-**AI Service only**:
-```bash
-cd ai-service
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt --pre
-python -m app.main
-# Access at http://localhost:8000
-```
+ 
 
 ### Database migrations
 
@@ -196,11 +180,11 @@ dotnet ef migrations add MigrationName --project src/CVAnalyzer.Infrastructure -
 
 ## Next Steps
 
-- Read [Architecture Documentation](README.md)
+- Read [Architecture Documentation](docs/ARCHITECTURE.md)
 - Configure [Azure Infrastructure with Terraform](terraform/README.md)
 - Review [Backend Documentation](backend/README.md)
-- Review [Frontend Documentation](frontend/cv-analyzer-frontend/FRONTEND_README.md)
-- Review [AI Service Documentation](ai-service/README.md)
+- Review [Frontend Documentation](frontend/README.md)
+- Read [Agent Framework Guide](docs/AGENT_FRAMEWORK.md)
 
 ## Support
 

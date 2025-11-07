@@ -1,8 +1,8 @@
 # CV Analyzer Backend
 
-A clean, enterprise-grade Web API for an AI Resume Optimizer platform built with .NET 9 and Clean Architecture principles.
+A clean, enterprise-grade Web API for the CV Analyzer platform built with .NET 9, Clean Architecture principles, and an integrated Agent Service (Microsoft Agent Framework + Azure OpenAI).
 
-**Note**: This is part of a monorepo. See the [root README](../README.md) for the complete platform overview including the Python AI service.
+**Note**: This is part of a monorepo. See the [root README](../README.md) and `docs/ARCHITECTURE.md` for full platform context. The former separate Python AI service has been replaced by the integrated AgentService.
 
 ## Architecture
 
@@ -36,10 +36,10 @@ This project follows Clean Architecture with clear separation of concerns:
 
 ### Local Development
 
-1. Clone the repository:
+1. Clone the repository (from repo root):
    ```bash
-   git clone https://github.com/MatGhp/CV-Analyzer.Backend.git
-   cd CV-Analyzer.Backend
+   git clone https://github.com/MatGhp/CV.Analyzer.git
+   cd CV.Analyzer/backend
    ```
 
 2. Restore dependencies:
@@ -72,7 +72,7 @@ docker-compose up -d
 
 Access the API at `http://localhost:5000`
 
-**Note**: Docker Compose configuration is at the repository root level.
+**Note**: Docker Compose configuration is at the repository root level and starts the frontend, backend API (with AgentService), and SQL Server.
 
 ### Running Tests
 
@@ -102,20 +102,27 @@ See [../terraform/README.md](../terraform/README.md) for deployment instructions
 └── docker-compose.yml             # Local development stack
 ```
 
-## API Endpoints
+## Core API Endpoints (Representative)
 
 - `GET /api/health` - Health check
 - `POST /api/resumes` - Upload a resume
-- `GET /api/resumes/{id}` - Get resume by ID
+- `GET /api/resumes/{id}` - Get resume by ID (includes suggestions)
+- `POST /api/resumes/{id}/analyze` - Triggers agent-based resume analysis
 
 ## Configuration
 
-Key configuration settings in `appsettings.json`:
+Key configuration settings in `appsettings.json` / environment variables:
 
 - `ConnectionStrings:DefaultConnection` - Database connection
 - `UseKeyVault` - Enable Azure Key Vault integration
 - `KeyVault:Uri` - Key Vault URI
+- `Agent:Endpoint` - Azure OpenAI endpoint
+- `Agent:Deployment` - Model deployment name (e.g. gpt-4o-mini)
+
+## Agent Framework Usage
+
+See `docs/AGENT_FRAMEWORK.md` for detailed usage, DI patterns, and migration notes.
 
 ## License
 
-This project is licensed under the MIT License.
+MIT License.

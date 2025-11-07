@@ -1,4 +1,21 @@
-## CV Analyzer Monorepo - Git Ignore
+# Terraform state and plans
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*tfplan*
+terraform/*.backup*
+terraform/*backup*
+terraform/*.lock.hcl
+
+# VS Code
+.vscode/
+
+# Node
+node_modules/
+
+# Logs
+*.log
+**/logs/## CV Analyzer Monorepo - Git Ignore
 ## Covers .NET Backend, Python AI Service, and Terraform Infrastructure
 
 # ============================================

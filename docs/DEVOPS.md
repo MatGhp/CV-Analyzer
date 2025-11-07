@@ -411,7 +411,7 @@ terraform import azurerm_container_app.api /subscriptions/.../resourceGroups/...
 3. **SQL Password Missing**:
 ```bash
 # Set Terraform variable for SQL admin password
-# Format: TF_VAR_sql_admin_password (with your actual password value)
+# Format: TF_VAR_sql_admin_password (set at runtime; never commit real values)
 # Or use GitHub secret: SQL_ADMIN_PASSWORD in workflow
 ```
 
