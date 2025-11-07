@@ -1,1 +1,24 @@
-/* You can add global styles to this file, and also import other style files */
+/* Global styles and utility layer imports */
+/* Import Open Props design tokens (CSS vars) */
+/* Fallback to CDN if local package resolution fails: comment next line and see README */
+/* Using local variables for now; can re-enable when path is resolved */
+/* @import "open-props/open-props.min.css"; */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS variables (can layer over open-props) */
+:root {
+	--app-radius: 0.75rem;
+	--app-bg: var(--surface-1);
+}
+
+body {
+	background: var(--app-bg);
+	font-family: system-ui, Inter, Arial, sans-serif;
+	color: var(--text-1);
+}
+
+.card {
+	@apply bg-base-100 shadow rounded-xl p-6 border border-base-300;
+}
