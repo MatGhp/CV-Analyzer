@@ -15,6 +15,7 @@ Primary docs live under `docs/`. Start here:
 | [Terraform](docs/TERRAFORM.md) | Infrastructure as Code details |
 | [Agent Framework](docs/AGENT_FRAMEWORK.md) | Using Microsoft Agent Framework in C# |
 | [Refactoring Summary](docs/REFACTORING_SUMMARY.md) | KISS improvements & rationale |
+| [Git Workflow](docs/GIT_WORKFLOW.md) | Streamlined branching, commits & secret-safe practices |
 
 ## 🏗️ High-Level Architecture
 
@@ -41,7 +42,7 @@ docker-compose up -d
 # SQL Server: localhost:1433
 ```
 
-> NOTE: Set sensitive values (e.g. SQL admin password) via a local environment variable or secret manager. Do not commit example commands containing credential variable names.
+> NOTE: Set sensitive values (e.g. SQL admin password) via a local environment variable or secret manager. Avoid committing lines showing removed example commands.
 
 For detailed setup (manual service runs, migrations, testing) see `docs/README.md`.
 
@@ -68,6 +69,8 @@ dotnet test
 2. Follow Clean Architecture & Angular signals patterns
 3. Add/adjust tests with each behavioral change
 4. Update docs when adding new public endpoints or infra
+5. Use Conventional Commits (template: `.gitmessage.txt`); configure: `git config commit.template .gitmessage.txt`
+6. See `docs/GIT_WORKFLOW.md` for branching & rebase guidance
 
 ## 📄 License
 

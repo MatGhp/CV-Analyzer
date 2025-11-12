@@ -17,7 +17,10 @@ terraform {
 }
 
 provider "azurerm" {
-  subscription_id = "9bf7d398-40c9-420e-8331-563f3e0dc68f"
+  # subscription_id intentionally omitted to avoid committing a real or example subscription ID.
+  # Set it via environment variable or Azure CLI login context instead of hardcoding:
+  #   az account set --subscription <YOUR_SUBSCRIPTION_ID>
+  # Or in Terraform Cloud/CI, configure via TF_VAR_subscription_id variable.
 
   features {
     resource_group {

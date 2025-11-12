@@ -24,7 +24,7 @@ services:
       - "5000:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=CVAnalyzerDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=CVAnalyzerDb;User Id=sa;Password=<PASSWORD_PLACEHOLDER>;TrustServerCertificate=True # Placeholder only; supply real value via secret
       - UseKeyVault=false
       - Agent__Endpoint=${AI_FOUNDRY_ENDPOINT}
       - Agent__Deployment=${MODEL_DEPLOYMENT_NAME:-gpt-4o}
@@ -42,7 +42,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
+      - SA_PASSWORD=<PASSWORD_PLACEHOLDER> # Placeholder only; override via secret/env var locally
     ports:
       - "1433:1433"
     volumes:

@@ -4,11 +4,14 @@ Your starting point for all project docs. Each guide is concise, actionable, and
 
 ## Core Guides
 
+- **Golden Architecture**: `docs/GOLDEN_ARCHITECTURE.md` — Microsoft's enterprise agentic architecture mapped to CV Analyzer
 - Architecture: `docs/ARCHITECTURE.md` — System, components, and data flow
 - Security: `docs/SECURITY.md` — Guardrails, secret management, hooks, checklists
 - DevOps: `docs/DEVOPS.md` — CI/CD, environments, operations, troubleshooting
 - Terraform: `docs/TERRAFORM.md` — Infrastructure as Code, modules, workflows
 - Agent Framework: `docs/AGENT_FRAMEWORK.md` — Using Microsoft Agent Framework in C#
+- Git Workflow: `docs/GIT_WORKFLOW.md` — Branch naming, commits, rebase, and secret handling
+- Frontend MVP: `docs/FRONTEND_MVP.md` — Angular UI components and feature requirements
 - Refactoring Summary: `docs/REFACTORING_SUMMARY.md` — KISS improvements & rationale
 
 ## Quick Starts

@@ -57,6 +57,12 @@ variable "image_tag" {
   default     = "latest"
 }
 
+variable "subscription_id" {
+  description = "Azure subscription ID (optional). Prefer Azure CLI context or environment variables."
+  type        = string
+  default     = null
+}
+
 variable "model_deployment_name" {
   description = "Name for the GPT-4o deployment"
   type        = string

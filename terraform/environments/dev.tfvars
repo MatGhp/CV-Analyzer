@@ -6,8 +6,7 @@ location    = "swedencentral"
 
 # SQL Configuration
 sql_admin_username = "cvadmin_dev"  # Non-standard username for security
-# Note: SQL admin password must be set via environment variable:
-# $env:TF_VAR_sql_admin_password = "YourSecurePassword123!"
+# Note: Set the SQL admin password via a local environment variable on your machine (do not commit real secrets or commands).
 
 # Container Registry Configuration
 acr_sku = "Basic"  # Basic SKU for dev environment
