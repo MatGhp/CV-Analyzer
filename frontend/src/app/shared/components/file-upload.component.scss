@@ -1,0 +1,143 @@
+.file-upload-container {
+  width: 100%;
+}
+
+.dropzone {
+  border: 2px dashed hsl(var(--bc) / 0.2);
+  border-radius: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: hsl(var(--b1));
+}
+
+.dropzone:hover,
+.dropzone:focus {
+  border-color: hsl(var(--p));
+  background: hsl(var(--p) / 0.05);
+  outline: none;
+}
+
+.dropzone.dragover {
+  border-color: hsl(var(--p));
+  background: hsl(var(--p) / 0.1);
+  transform: scale(1.02);
+}
+
+.dropzone.has-file {
+  border-style: solid;
+  border-color: hsl(var(--su));
+  background: hsl(var(--su) / 0.05);
+}
+
+.dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.icon-cloud {
+  width: 3rem;
+  height: 3rem;
+  color: hsl(var(--bc) / 0.4);
+}
+
+.dropzone-text {
+  font-size: 1rem;
+  color: hsl(var(--bc));
+  margin: 0;
+}
+
+.text-primary {
+  color: hsl(var(--p));
+  font-weight: 600;
+}
+
+.text-link {
+  color: hsl(var(--p));
+  text-decoration: underline;
+}
+
+.dropzone-hint {
+  font-size: 0.875rem;
+  color: hsl(var(--bc) / 0.6);
+  margin: 0;
+}
+
+.file-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: hsl(var(--b2));
+  border-radius: 0.5rem;
+  max-width: 100%;
+}
+
+.icon-file {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  color: hsl(var(--p));
+}
+
+.file-name {
+  flex: 1;
+  font-weight: 500;
+  color: hsl(var(--bc));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.file-size {
+  font-size: 0.875rem;
+  color: hsl(var(--bc) / 0.6);
+  flex-shrink: 0;
+}
+
+.btn-remove {
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  background: hsl(var(--er) / 0.1);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-remove:hover {
+  background: hsl(var(--er) / 0.2);
+}
+
+.btn-remove svg {
+  width: 1rem;
+  height: 1rem;
+  color: hsl(var(--er));
+}
+
+.validation-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: hsl(var(--er) / 0.1);
+  border-radius: 0.5rem;
+  color: hsl(var(--er));
+  font-size: 0.875rem;
+}
+
+.icon-error {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}

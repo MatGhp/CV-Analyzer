@@ -21,19 +21,58 @@ export enum ResumeStatus {
 export interface Suggestion {
   id: string;
   resumeId: string;
-  category: string;
+  category: SuggestionCategory;
   description: string;
-  priority: number;
+  priority: SuggestionPriority; // 1-5, higher = more important
 }
+
+export type SuggestionCategory =
+  | 'Formatting'
+  | 'Keywords'
+  | 'Experience'
+  | 'Clarity'
+  | 'Structure'
+  | 'Content';
+
+export type SuggestionPriority = 1 | 2 | 3 | 4 | 5;
 
 export interface UploadResumeRequest {
   userId: string;
   file: File;
 }
 
-export interface AnalyzeResumeResponse {
-  score: number;
-  optimizedContent: string;
-  suggestions: Suggestion[];
-  metadata: Record<string, any>;
+export interface UploadResumeResponse {
+  id: string;
 }
+
+export interface AnalysisResponse {
+  score: number; // 0-100
+  summary?: string;
+  suggestions: SuggestionDto[];
+  optimizedContent?: string;
+  metadata?: AnalysisMetadata;
+}
+
+export interface SuggestionDto {
+  category: SuggestionCategory;
+  description: string;
+  priority: SuggestionPriority;
+}
+
+export interface AnalysisMetadata {
+  analyzedAt?: string;
+  model?: string;
+  processingTimeMs?: number;
+}
+
+// Client-side file validation
+export interface FileValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+export const FILE_CONSTRAINTS = {
+  maxSizeBytes: 5 * 1024 * 1024, // 5MB
+  allowedTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  allowedExtensions: ['.pdf', '.docx']
+} as const;

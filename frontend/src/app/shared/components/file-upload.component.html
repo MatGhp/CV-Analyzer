@@ -1,0 +1,70 @@
+<div class="file-upload-container">
+  <!-- Dropzone -->
+  <div
+    class="dropzone"
+    [class.dragover]="isDragging()"
+    [class.has-file]="selectedFile()"
+    (click)="fileInput.click()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+    role="button"
+    tabindex="0"
+    [attr.aria-label]="selectedFile() ? 'Change file: ' + selectedFile()?.name : 'Upload resume file, PDF or DOCX up to 5MB'"
+    (keydown.enter)="fileInput.click()"
+    (keydown.space)="fileInput.click()">
+
+    @if (!selectedFile()) {
+      <!-- Empty state -->
+      <div class="dropzone-content">
+        <svg class="icon-cloud" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        <p class="dropzone-text">
+          <span class="text-primary">Drag & drop</span> or <span class="text-link">choose file</span>
+        </p>
+        <p class="dropzone-hint">PDF, DOCX · up to 5 MB</p>
+      </div>
+    } @else {
+      <!-- File chip -->
+      <div class="file-chip" (click)="$event.stopPropagation()">
+        <svg class="icon-file" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <span class="file-name">{{ selectedFile()!.name }}</span>
+        <span class="file-size">({{ formatFileSize(selectedFile()!.size) }})</span>
+        <button
+          type="button"
+          class="btn-remove"
+          (click)="removeFile()"
+          aria-label="Remove file">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Hidden file input -->
+  <input
+    #fileInput
+    type="file"
+    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    (change)="onFileSelected($event)"
+    style="display: none;"
+    aria-hidden="true" />
+
+  <!-- Validation error -->
+  @if (validationError()) {
+    <div class="validation-error" role="alert" aria-live="polite">
+      <svg class="icon-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>{{ validationError() }}</span>
+    </div>
+  }
+</div>

@@ -1,28 +1,34 @@
-<main class="p-6 flex flex-col gap-8 max-w-5xl mx-auto">
-  <header class="flex items-center gap-3">
-    <h1 class="text-3xl font-semibold">CV Analyzer</h1>
+<div class="app-container">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-content">
+      <h1 class="app-title">{{ title }}</h1>
+      <p class="app-subtitle">Get instant AI-powered feedback to improve your resume</p>
+    </div>
   </header>
-  <section class="grid md:grid-cols-2 gap-6">
-    <div class="card space-y-4">
-      <h2 class="text-xl font-medium">Upload Resume</h2>
-      <p class="text-sm opacity-80">PDF or DOCX, up to 5 MB.</p>
-      <div class="border border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-base-200">
-        <p class="mb-2">Drag & drop or choose file</p>
-        <button class="btn btn-primary btn-sm">Choose File</button>
-      </div>
-      <button class="btn btn-accent w-full" disabled>Analyze Resume</button>
-    </div>
-    <div class="card space-y-4">
-      <h2 class="text-xl font-medium">Analysis Result</h2>
-      <div class="text-sm opacity-70">No analysis yet. Upload a resume to begin.</div>
-      <div class="grid grid-cols-3 gap-3" aria-hidden="true">
-        <div class="h-4 bg-base-200 rounded"></div>
-        <div class="h-4 bg-base-200 rounded"></div>
-        <div class="h-4 bg-base-200 rounded"></div>
-      </div>
-    </div>
-  </section>
-  <footer class="text-xs opacity-60 text-center">MVP UI — replace with functional feature components.</footer>
-</main>
 
-<router-outlet />
+  <!-- Main Content -->
+  <main class="app-main">
+    <!-- Upload Section -->
+    <section class="section-upload">
+      <app-resume-upload
+        (analysisComplete)="onAnalysisComplete($event)">
+      </app-resume-upload>
+    </section>
+
+    <!-- Results Section -->
+    @if (analysisResult()) {
+      <section #resultsSection class="section-results">
+        <app-resume-analysis
+          [analysis]="analysisResult()!"
+          (uploadAnother)="onUploadAnother()">
+        </app-resume-analysis>
+      </section>
+    }
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p>CV Analyzer MVP · Powered by AI</p>
+  </footer>
+</div>

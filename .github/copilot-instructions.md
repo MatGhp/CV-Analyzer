@@ -47,6 +47,13 @@ ng generate component features/my-feature --standalone
 ```
 
 **2. Component Pattern (modern Angular):**
+
+**⚠️ CRITICAL: ALWAYS use separate template and style files:**
+- **NEVER** use inline `template:` or `styles:` in @Component decorator
+- **ALWAYS** use `templateUrl:` and `styleUrl:` with separate `.html` and `.scss` files
+- Inline templates/styles are only acceptable for tiny (<5 lines) utility components
+- This improves readability, syntax highlighting, and maintainability
+
 ```typescript
 import { Component, signal, computed, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -55,8 +62,8 @@ import { CommonModule } from '@angular/common';
   selector: 'app-my-feature',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './my-feature.html',
-  styleUrl: './my-feature.scss'
+  templateUrl: './my-feature.component.html',  // ✅ Separate HTML file
+  styleUrl: './my-feature.component.scss'      // ✅ Separate SCSS file
 })
 export class MyFeatureComponent {
   // Use inject() instead of constructor injection
