@@ -1,4 +1,5 @@
 using CVAnalyzer.Domain.Entities;
+using CVAnalyzer.Domain.Enums;
 using FluentAssertions;
 using Xunit;
 
@@ -10,7 +11,7 @@ public class ResumeTests
     public void Resume_Should_Be_Created_With_Default_Values()
     {
         var resume = new Resume();
-        resume.Status.Should().Be("Pending");
+        resume.Status.Should().Be(ResumeStatus.Pending);
         resume.Suggestions.Should().NotBeNull();
         resume.Suggestions.Should().BeEmpty();
     }
@@ -24,14 +25,14 @@ public class ResumeTests
             Id = resumeId,
             UserId = "user123",
             FileName = "test.pdf",
-            BlobStorageUrl = "https://example.com/test.pdf",
-            OriginalContent = "Test content",
-            Status = "Uploaded"
+            BlobUrl = "https://example.com/test.pdf",
+            Content = "Test content",
+            Status = ResumeStatus.Pending
         };
 
         resume.Id.Should().Be(resumeId);
         resume.UserId.Should().Be("user123");
         resume.FileName.Should().Be("test.pdf");
-        resume.Status.Should().Be("Uploaded");
+        resume.Status.Should().Be(ResumeStatus.Pending);
     }
 }

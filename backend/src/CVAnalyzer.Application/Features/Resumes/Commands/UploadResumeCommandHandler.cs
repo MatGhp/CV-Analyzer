@@ -17,17 +17,17 @@ public class UploadResumeCommandHandler : IRequestHandler<UploadResumeCommand, G
 
     public async Task<Guid> Handle(UploadResumeCommand request, CancellationToken cancellationToken)
     {
-        var blobUrl = await _blobStorage.UploadAsync(request.FileStream, request.FileName, cancellationToken);
+        var blobUrl = await _blobStorage.UploadFileAsync(request.FileStream, request.FileName, cancellationToken);
 
         var resume = new Resume
         {
             Id = Guid.NewGuid(),
             UserId = request.UserId,
             FileName = request.FileName,
-            BlobStorageUrl = blobUrl,
-            OriginalContent = string.Empty,
-            Status = "Uploaded",
-            CreatedAt = DateTime.UtcNow
+            BlobUrl = blobUrl,
+            Content = string.Empty,
+            Status = Domain.Enums.ResumeStatus.Pending,
+            CreatedAt = DateTimeOffset.UtcNow.UtcDateTime
         };
 
         _context.Resumes.Add(resume);

@@ -18,13 +18,13 @@ public class ResumeConfiguration : IEntityTypeConfiguration<Resume>
             .IsRequired()
             .HasMaxLength(255);
 
-        builder.Property(r => r.BlobStorageUrl)
+        builder.Property(r => r.BlobUrl)
             .IsRequired()
             .HasMaxLength(500);
 
         builder.Property(r => r.Status)
             .IsRequired()
-            .HasMaxLength(50);
+            .HasConversion<int>();
 
         builder.HasMany(r => r.Suggestions)
             .WithOne(s => s.Resume)

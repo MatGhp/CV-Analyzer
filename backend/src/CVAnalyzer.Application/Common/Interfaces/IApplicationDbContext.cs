@@ -7,5 +7,6 @@ public interface IApplicationDbContext
 {
     DbSet<Resume> Resumes { get; }
     DbSet<Suggestion> Suggestions { get; }
+    DbSet<CandidateInfo> CandidateInfos { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
