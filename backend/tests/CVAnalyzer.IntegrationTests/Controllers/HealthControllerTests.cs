@@ -1,13 +1,14 @@
 using System.Net;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace CVAnalyzer.IntegrationTests.Controllers;
 
-public class HealthControllerTests : IClassFixture<CustomWebApplicationFactory<Program>>
+public class HealthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 {
-    private readonly CustomWebApplicationFactory<Program> _factory;
+    private readonly WebApplicationFactory<Program> _factory;
 
-    public HealthControllerTests(CustomWebApplicationFactory<Program> factory)
+    public HealthControllerTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }

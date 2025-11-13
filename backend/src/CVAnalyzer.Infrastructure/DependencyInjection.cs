@@ -68,7 +68,21 @@ public static class DependencyInjection
         configuration.GetSection(AzureStorageOptions.SectionName).Bind(storageOptions);
         
         if (string.IsNullOrEmpty(storageOptions.ConnectionString) && string.IsNullOrEmpty(storageOptions.AccountName))
+        {
+            // For testing/development, register placeholder clients that won't be used
+            // This prevents DI validation errors in integration tests
+            services.AddSingleton<BlobServiceClient>(sp => 
+            {
+                // Placeholder - will throw if actually used
+                throw new InvalidOperationException("BlobServiceClient not configured. Set AzureStorage:ConnectionString or AzureStorage:AccountName in configuration.");
+            });
+            services.AddSingleton<QueueServiceClient>(sp => 
+            {
+                // Placeholder - will throw if actually used
+                throw new InvalidOperationException("QueueServiceClient not configured. Set AzureStorage:ConnectionString or AzureStorage:AccountName in configuration.");
+            });
             return;
+        }
 
         if (!string.IsNullOrEmpty(storageOptions.ConnectionString))
         {
@@ -88,7 +102,17 @@ public static class DependencyInjection
         var docIntelOptions = new DocumentIntelligenceOptions();
         configuration.GetSection(DocumentIntelligenceOptions.SectionName).Bind(docIntelOptions);
         
-        if (string.IsNullOrEmpty(docIntelOptions.Endpoint)) return;
+        if (string.IsNullOrEmpty(docIntelOptions.Endpoint))
+        {
+            // For testing/development, register placeholder client that won't be used
+            // This prevents DI validation errors in integration tests
+            services.AddSingleton<DocumentAnalysisClient>(sp => 
+            {
+                // Placeholder - will throw if actually used
+                throw new InvalidOperationException("DocumentAnalysisClient not configured. Set DocumentIntelligence:Endpoint and either DocumentIntelligence:ApiKey or UseManagedIdentity in configuration.");
+            });
+            return;
+        }
 
         if (!string.IsNullOrEmpty(docIntelOptions.ApiKey))
         {
@@ -97,6 +121,14 @@ public static class DependencyInjection
         else if (docIntelOptions.UseManagedIdentity)
         {
             services.AddSingleton(new DocumentAnalysisClient(new Uri(docIntelOptions.Endpoint), new DefaultAzureCredential()));
+        }
+        else
+        {
+            // Placeholder when endpoint is set but no auth configured
+            services.AddSingleton<DocumentAnalysisClient>(sp => 
+            {
+                throw new InvalidOperationException($"DocumentAnalysisClient configured with endpoint {docIntelOptions.Endpoint} but no authentication method specified. Set either DocumentIntelligence:ApiKey or UseManagedIdentity=true.");
+            });
         }
     }
 }

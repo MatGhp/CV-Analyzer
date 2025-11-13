@@ -36,6 +36,9 @@ node_modules/
 azureauth.json
 azure-credentials.json
 
+# Local configuration files with secrets
+**/appsettings.Local.json
+
 # GitHub secrets (if accidentally saved locally)
 github-secrets.json
 secrets.yml
