@@ -48,6 +48,30 @@ module "ai_foundry" {
   tags = local.common_tags
 }
 
+# Storage Module (Blob + Queue)
+module "storage" {
+  source              = "./modules/storage"
+  name_prefix         = "cvanalyzer"
+  environment         = var.environment
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  retention_days      = 30
+  enable_auto_delete  = var.environment != "prod"
+
+  tags = local.common_tags
+}
+
+# Document Intelligence Module
+module "document_intelligence" {
+  source              = "./modules/document-intelligence"
+  name_prefix         = "cvanalyzer-${var.environment}"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  sku_name            = var.environment == "prod" ? "S0" : "F0"
+
+  tags = local.common_tags
+}
+
 # Azure Container Apps Module
 module "container_apps" {
   source              = "./modules/container-apps"
@@ -61,31 +85,46 @@ module "container_apps" {
   acr_login_server = module.acr.login_server
 
   # Configuration
-  sql_connection_string = module.sql_database.connection_string
-  ai_foundry_endpoint   = module.ai_foundry.endpoint
-  model_deployment_name = var.model_deployment_name
-  min_replicas          = var.min_replicas
-  max_replicas          = var.max_replicas
+  sql_connection_string          = module.sql_database.connection_string
+  ai_foundry_endpoint            = module.ai_foundry.endpoint
+  model_deployment_name          = var.model_deployment_name
+  storage_account_name           = module.storage.name
+  storage_blob_endpoint          = module.storage.primary_blob_endpoint
+  storage_queue_endpoint         = module.storage.primary_queue_endpoint
+  queue_config                   = module.storage.queue_names
+  document_intelligence_endpoint = module.document_intelligence.endpoint
+  document_intelligence_key      = module.document_intelligence.primary_access_key
+  min_replicas                   = var.min_replicas
+  max_replicas                   = var.max_replicas
 
   tags = local.common_tags
 }
 
-# Grant Container Apps ACR pull access
-resource "azurerm_role_assignment" "acr_pull_frontend" {
-  scope                = module.acr.id
-  role_definition_name = "AcrPull"
+# Role assignments for Container Apps
+locals {
+  frontend_role_assignments = {
+    acr_pull = { scope = module.acr.id, role = "AcrPull" }
+  }
+
+  api_role_assignments = {
+    acr_pull              = { scope = module.acr.id, role = "AcrPull" }
+    cognitive_services    = { scope = module.ai_foundry.id, role = "Cognitive Services User" }
+    storage_blob          = { scope = module.storage.id, role = "Storage Blob Data Contributor" }
+    storage_queue         = { scope = module.storage.id, role = "Storage Queue Data Contributor" }
+    document_intelligence = { scope = module.document_intelligence.id, role = "Cognitive Services User" }
+  }
+}
+
+resource "azurerm_role_assignment" "frontend_roles" {
+  for_each             = local.frontend_role_assignments
+  scope                = each.value.scope
+  role_definition_name = each.value.role
   principal_id         = module.container_apps.frontend_identity_principal_id
 }
 
-resource "azurerm_role_assignment" "acr_pull_api" {
-  scope                = module.acr.id
-  role_definition_name = "AcrPull"
-  principal_id         = module.container_apps.api_identity_principal_id
-}
-
-# Grant API access to AI Foundry (since AI is now integrated into API)
-resource "azurerm_role_assignment" "api_foundry_access" {
-  scope                = module.ai_foundry.id
-  role_definition_name = "Cognitive Services User"
+resource "azurerm_role_assignment" "api_roles" {
+  for_each             = local.api_role_assignments
+  scope                = each.value.scope
+  role_definition_name = each.value.role
   principal_id         = module.container_apps.api_identity_principal_id
 }

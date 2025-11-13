@@ -47,8 +47,8 @@ resource "azurerm_container_app" "frontend" {
   }
 
   ingress {
-    target_port              = 80
-    external_enabled         = true
+    target_port                = 80
+    external_enabled           = true
     allow_insecure_connections = false
     traffic_weight {
       latest_revision = true
@@ -68,6 +68,11 @@ resource "azurerm_container_app" "api" {
 
   identity {
     type = "SystemAssigned"
+  }
+
+  secret {
+    name  = "docintel-api-key"
+    value = var.document_intelligence_key
   }
 
   dynamic "registry" {
@@ -121,6 +126,51 @@ resource "azurerm_container_app" "api" {
       env {
         name  = "Agent__TopP"
         value = "0.95"
+      }
+
+      env {
+        name  = "AzureStorage__UseManagedIdentity"
+        value = "true"
+      }
+
+      env {
+        name  = "AzureStorage__AccountName"
+        value = var.storage_account_name
+      }
+
+      env {
+        name  = "AzureStorage__BlobEndpoint"
+        value = var.storage_blob_endpoint
+      }
+
+      env {
+        name  = "AzureStorage__QueueEndpoint"
+        value = var.storage_queue_endpoint
+      }
+
+      env {
+        name  = "AzureStorage__QueueName"
+        value = var.queue_config.main_queue
+      }
+
+      env {
+        name  = "AzureStorage__PoisonQueueName"
+        value = var.queue_config.poison_queue
+      }
+
+      env {
+        name  = "AzureStorage__ContainerName"
+        value = var.queue_config.container
+      }
+
+      env {
+        name  = "DocumentIntelligence__Endpoint"
+        value = var.document_intelligence_endpoint
+      }
+
+      env {
+        name        = "DocumentIntelligence__ApiKey"
+        secret_name = "docintel-api-key"
       }
     }
   }

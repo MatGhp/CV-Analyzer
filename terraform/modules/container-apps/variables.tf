@@ -73,6 +73,41 @@ variable "acr_login_server" {
   default     = ""
 }
 
+variable "storage_account_name" {
+  description = "Storage account name for managed identity access"
+  type        = string
+}
+
+variable "storage_blob_endpoint" {
+  description = "Storage blob endpoint"
+  type        = string
+}
+
+variable "storage_queue_endpoint" {
+  description = "Storage queue endpoint"
+  type        = string
+}
+
+variable "queue_config" {
+  description = "Queue configuration from storage module"
+  type = object({
+    main_queue   = string
+    poison_queue = string
+    container    = string
+  })
+}
+
+variable "document_intelligence_endpoint" {
+  description = "Document Intelligence endpoint URL"
+  type        = string
+}
+
+variable "document_intelligence_key" {
+  description = "Document Intelligence API key"
+  type        = string
+  sensitive   = true
+}
+
 variable "tags" {
   description = "Resource tags"
   type        = map(string)

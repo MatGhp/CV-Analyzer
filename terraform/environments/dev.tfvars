@@ -1,15 +1,18 @@
 # Development Environment Configuration
 
+# Azure Subscription
+subscription_id = "9bf7d398-40c9-420e-8331-563f3e0dc68f"
+
 # Resource Location
 environment = "dev"
 location    = "swedencentral"
 
 # SQL Configuration
-sql_admin_username = "cvadmin_dev"  # Non-standard username for security
+sql_admin_username = "cvadmin_dev" # Non-standard username for security
 # Note: Set the SQL admin password via a local environment variable on your machine (do not commit real secrets or commands).
 
 # Container Registry Configuration
-acr_sku = "Basic"  # Basic SKU for dev environment
+acr_sku = "Basic" # Basic SKU for dev environment
 
 # Container Apps Configuration
 min_replicas = 0 # Enable scale-to-zero for cost savings in dev
