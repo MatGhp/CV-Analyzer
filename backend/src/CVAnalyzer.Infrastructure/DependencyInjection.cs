@@ -39,9 +39,6 @@ public static class DependencyInjection
         // Resume Analysis Orchestrator
         services.AddScoped<ResumeAnalysisOrchestrator>();
 
-        // Background Worker
-        services.AddHostedService<ResumeAnalysisWorker>();
-
         // Configure AgentService
         ConfigureAgentService(services, configuration);
 
@@ -131,6 +128,9 @@ public static class DependencyInjection
             services.AddSingleton(new BlobServiceClient(new Uri($"https://{storageOptions.AccountName}.blob.core.windows.net"), credential));
             services.AddSingleton(new QueueServiceClient(new Uri($"https://{storageOptions.AccountName}.queue.core.windows.net"), credential));
         }
+
+        // Register background worker only when Azure Storage is configured
+        services.AddHostedService<ResumeAnalysisWorker>();
     }
 
     private static void ConfigureDocumentIntelligence(IServiceCollection services, IConfiguration configuration)
