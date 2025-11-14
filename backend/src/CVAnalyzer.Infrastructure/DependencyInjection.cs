@@ -104,16 +104,10 @@ public static class DependencyInjection
         {
             // For testing/development, register placeholder clients that won't be used
             // This prevents DI validation errors in integration tests
-            services.AddSingleton(sp => 
-            {
-                // Return null when not configured - allows graceful degradation
-                return (BlobServiceClient?)null;
-            });
-            services.AddSingleton(sp => 
-            {
-                // Return null when not configured - allows graceful degradation
-                return (QueueServiceClient?)null;
-            });
+#pragma warning disable CS8634, CS8621 // Nullability warnings for test scenario
+            services.AddSingleton<BlobServiceClient>(sp => null!);
+            services.AddSingleton<QueueServiceClient>(sp => null!);
+#pragma warning restore CS8634, CS8621
             return;
         }
 
