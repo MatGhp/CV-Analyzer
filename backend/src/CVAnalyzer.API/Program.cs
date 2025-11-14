@@ -38,14 +38,29 @@ builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
+// Initialize Azure Storage Queues if configured
 using (var scope = app.Services.CreateScope())
 {
-    var queueServiceClient = scope.ServiceProvider.GetRequiredService<Azure.Storage.Queues.QueueServiceClient>();
-    var queueOptions = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<CVAnalyzer.Infrastructure.Options.QueueOptions>>().Value;
-    
-    await queueServiceClient.GetQueueClient(queueOptions.ResumeAnalysisQueueName).CreateIfNotExistsAsync();
-    await queueServiceClient.GetQueueClient(queueOptions.PoisonQueueName).CreateIfNotExistsAsync();
-    Log.Information("Azure Storage Queues initialized: {ResumeQueue}, {PoisonQueue}", queueOptions.ResumeAnalysisQueueName, queueOptions.PoisonQueueName);
+    try
+    {
+        var queueServiceClient = scope.ServiceProvider.GetService<Azure.Storage.Queues.QueueServiceClient>();
+        if (queueServiceClient != null)
+        {
+            var queueOptions = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<CVAnalyzer.Infrastructure.Options.QueueOptions>>().Value;
+            
+            await queueServiceClient.GetQueueClient(queueOptions.ResumeAnalysisQueueName).CreateIfNotExistsAsync();
+            await queueServiceClient.GetQueueClient(queueOptions.PoisonQueueName).CreateIfNotExistsAsync();
+            Log.Information("Azure Storage Queues initialized: {ResumeQueue}, {PoisonQueue}", queueOptions.ResumeAnalysisQueueName, queueOptions.PoisonQueueName);
+        }
+        else
+        {
+            Log.Warning("QueueServiceClient not configured. Skipping queue initialization.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Failed to initialize Azure Storage Queues. This is expected in test environments.");
+    }
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();

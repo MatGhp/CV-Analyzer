@@ -16,7 +16,7 @@ public class UploadResumeCommandValidatorTests
     [Fact]
     public void Should_Have_Error_When_UserId_Is_Empty()
     {
-        using var stream = new MemoryStream();
+        using var stream = new MemoryStream(new byte[100]);
         var command = new UploadResumeCommand(string.Empty, "test.pdf", stream);
         var result = _validator.Validate(command);
         result.IsValid.Should().BeFalse();
@@ -26,7 +26,7 @@ public class UploadResumeCommandValidatorTests
     [Fact]
     public void Should_Have_Error_When_FileName_Is_Empty()
     {
-        using var stream = new MemoryStream();
+        using var stream = new MemoryStream(new byte[100]);
         var command = new UploadResumeCommand("user123", string.Empty, stream);
         var result = _validator.Validate(command);
         result.IsValid.Should().BeFalse();
@@ -36,7 +36,7 @@ public class UploadResumeCommandValidatorTests
     [Fact]
     public void Should_Not_Have_Error_When_Command_Is_Valid()
     {
-        using var stream = new MemoryStream();
+        using var stream = new MemoryStream(new byte[100]);
         var command = new UploadResumeCommand("user123", "test.pdf", stream);
         var result = _validator.Validate(command);
         result.IsValid.Should().BeTrue();
