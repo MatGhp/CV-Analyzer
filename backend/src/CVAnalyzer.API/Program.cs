@@ -38,13 +38,14 @@ builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
-// Ensure Azure Storage Queues exist
 using (var scope = app.Services.CreateScope())
 {
     var queueServiceClient = scope.ServiceProvider.GetRequiredService<Azure.Storage.Queues.QueueServiceClient>();
-    await queueServiceClient.GetQueueClient("resume-analysis").CreateIfNotExistsAsync();
-    await queueServiceClient.GetQueueClient("resume-analysis-poison").CreateIfNotExistsAsync();
-    Log.Information("Azure Storage Queues initialized");
+    var queueOptions = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<CVAnalyzer.Infrastructure.Options.QueueOptions>>().Value;
+    
+    await queueServiceClient.GetQueueClient(queueOptions.ResumeAnalysisQueueName).CreateIfNotExistsAsync();
+    await queueServiceClient.GetQueueClient(queueOptions.PoisonQueueName).CreateIfNotExistsAsync();
+    Log.Information("Azure Storage Queues initialized: {ResumeQueue}, {PoisonQueue}", queueOptions.ResumeAnalysisQueueName, queueOptions.PoisonQueueName);
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -65,6 +66,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+app.MapHealthChecks("/api/health");
 
 try
 {

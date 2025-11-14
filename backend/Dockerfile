@@ -11,6 +11,7 @@ COPY ["src/CVAnalyzer.API/CVAnalyzer.API.csproj", "src/CVAnalyzer.API/"]
 COPY ["src/CVAnalyzer.Application/CVAnalyzer.Application.csproj", "src/CVAnalyzer.Application/"]
 COPY ["src/CVAnalyzer.Domain/CVAnalyzer.Domain.csproj", "src/CVAnalyzer.Domain/"]
 COPY ["src/CVAnalyzer.Infrastructure/CVAnalyzer.Infrastructure.csproj", "src/CVAnalyzer.Infrastructure/"]
+COPY ["src/CVAnalyzer.AgentService/CVAnalyzer.AgentService.csproj", "src/CVAnalyzer.AgentService/"]
 RUN dotnet restore "src/CVAnalyzer.API/CVAnalyzer.API.csproj"
 
 COPY . .
