@@ -107,15 +107,15 @@ public static class DependencyInjection
         {
             // For testing/development, register placeholder clients that won't be used
             // This prevents DI validation errors in integration tests
-            services.AddSingleton<BlobServiceClient>(sp => 
+            services.AddSingleton(sp => 
             {
-                // Placeholder - will throw if actually used
-                throw new InvalidOperationException("BlobServiceClient not configured. Set AzureStorage:ConnectionString or AzureStorage:AccountName in configuration.");
+                // Return null when not configured - allows graceful degradation
+                return (BlobServiceClient?)null;
             });
-            services.AddSingleton<QueueServiceClient>(sp => 
+            services.AddSingleton(sp => 
             {
-                // Placeholder - will throw if actually used
-                throw new InvalidOperationException("QueueServiceClient not configured. Set AzureStorage:ConnectionString or AzureStorage:AccountName in configuration.");
+                // Return null when not configured - allows graceful degradation
+                return (QueueServiceClient?)null;
             });
             return;
         }
