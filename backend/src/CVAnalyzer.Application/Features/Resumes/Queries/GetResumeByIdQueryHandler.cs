@@ -1,3 +1,4 @@
+using CVAnalyzer.Application.Common.Extensions;
 using CVAnalyzer.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,7 @@ public class GetResumeByIdQueryHandler : IRequestHandler<GetResumeByIdQuery, Res
         var resume = await _context.Resumes
             .Include(r => r.Suggestions)
             .Include(r => r.CandidateInfo)
+            .AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken);
 
         if (resume == null)
@@ -29,22 +31,36 @@ public class GetResumeByIdQueryHandler : IRequestHandler<GetResumeByIdQuery, Res
 
         var sasToken = await _blobStorageService.GenerateSasTokenAsync(resume.BlobUrl, cancellationToken);
 
-        return new ResumeDto
-        {
-            Id = resume.Id,
-            UserId = resume.UserId,
-            FileName = resume.FileName,
-            BlobUrl = resume.BlobUrl,
-            BlobUrlWithSas = sasToken,
-            Content = resume.Content,
-            OptimizedContent = resume.OptimizedContent,
-            Status = (int)resume.Status,
-            Score = resume.Score,
-            CreatedAt = resume.CreatedAt,
-            UpdatedAt = resume.UpdatedAt,
-            AnalyzedAt = resume.AnalyzedAt,
-            CandidateInfo = resume.CandidateInfo,
-            Suggestions = resume.Suggestions.ToList()
-        };
+        var candidateInfoDto = resume.CandidateInfo != null
+            ? new CandidateInfoDto(
+                resume.CandidateInfo.FullName,
+                resume.CandidateInfo.Email,
+                resume.CandidateInfo.Phone,
+                resume.CandidateInfo.Location,
+                resume.CandidateInfo.Skills,
+                resume.CandidateInfo.YearsOfExperience,
+                resume.CandidateInfo.CurrentJobTitle,
+                resume.CandidateInfo.Education)
+            : null;
+
+        var suggestions = resume.Suggestions
+            .Select(s => new SuggestionDto(s.Category, s.Description, s.Priority))
+            .ToList();
+
+        return new ResumeDto(
+            resume.Id,
+            resume.UserId,
+            resume.FileName,
+            resume.BlobUrl,
+            sasToken,
+            resume.Content,
+            resume.OptimizedContent,
+            resume.Status.ToStatusString(),
+            resume.Score,
+            resume.CreatedAt,
+            resume.UpdatedAt,
+            resume.AnalyzedAt,
+            candidateInfoDto,
+            suggestions);
     }
 }

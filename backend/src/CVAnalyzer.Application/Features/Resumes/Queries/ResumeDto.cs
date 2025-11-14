@@ -1,21 +1,32 @@
-using CVAnalyzer.Domain.Entities;
-
 namespace CVAnalyzer.Application.Features.Resumes.Queries;
 
-public class ResumeDto
-{
-    public Guid Id { get; set; }
-    public string UserId { get; set; } = string.Empty;
-    public string FileName { get; set; } = string.Empty;
-    public string BlobUrl { get; set; } = string.Empty;
-    public string BlobUrlWithSas { get; set; } = string.Empty;
-    public string Content { get; set; } = string.Empty;
-    public string? OptimizedContent { get; set; }
-    public int Status { get; set; }
-    public int? Score { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-    public DateTime? AnalyzedAt { get; set; }
-    public CandidateInfo? CandidateInfo { get; set; }
-    public List<Suggestion> Suggestions { get; set; } = new();
-}
+public record ResumeDto(
+    Guid Id,
+    string UserId,
+    string FileName,
+    string BlobUrl,
+    string BlobUrlWithSas,
+    string Content,
+    string? OptimizedContent,
+    string Status,
+    int? Score,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt,
+    DateTime? AnalyzedAt,
+    CandidateInfoDto? CandidateInfo,
+    List<SuggestionDto> Suggestions);
+
+public record CandidateInfoDto(
+    string FullName,
+    string Email,
+    string? Phone,
+    string? Location,
+    List<string> Skills,
+    int? YearsOfExperience,
+    string? CurrentJobTitle,
+    string? Education);
+
+public record SuggestionDto(
+    string Category,
+    string Description,
+    int Priority);

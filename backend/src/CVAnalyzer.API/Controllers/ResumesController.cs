@@ -18,25 +18,43 @@ public class ResumesController : ControllerBase
         _logger = logger;
     }
 
-    [HttpPost]
-    public async Task<ActionResult<Guid>> Upload(IFormFile file, [FromForm] string userId, CancellationToken cancellationToken)
+    [HttpPost("upload")]
+    [ProducesResponseType(typeof(UploadResumeResponse), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Upload(
+        [FromForm] IFormFile file,
+        [FromForm] string userId,
+        CancellationToken cancellationToken)
     {
         if (file == null || file.Length == 0)
         {
-            return BadRequest("File is required");
+            return BadRequest("No file uploaded");
         }
-
-        _logger.LogInformation("Uploading resume for user {UserId}", userId);
 
         using var stream = file.OpenReadStream();
         var command = new UploadResumeCommand(userId, file.FileName, stream);
-        var resumeId = await _mediator.Send(command, cancellationToken);
+        var response = await _mediator.Send(command, cancellationToken);
 
-        return CreatedAtAction(nameof(GetById), new { id = resumeId }, resumeId);
+        return AcceptedAtAction(
+            nameof(GetStatus),
+            new { id = response.ResumeId },
+            response);
     }
 
-    [HttpGet("{id}")]
-    public async Task<ActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    [HttpGet("{id}/status")]
+    [ProducesResponseType(typeof(ResumeStatusResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetStatus(Guid id, CancellationToken cancellationToken)
+    {
+        var query = new GetResumeStatusQuery(id);
+        var status = await _mediator.Send(query, cancellationToken);
+        return Ok(status);
+    }
+
+    [HttpGet("{id}/analysis")]
+    [ProducesResponseType(typeof(ResumeDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetAnalysis(Guid id, CancellationToken cancellationToken)
     {
         var query = new GetResumeByIdQuery(id);
         var resume = await _mediator.Send(query, cancellationToken);
