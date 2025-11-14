@@ -8,11 +8,16 @@ public class UploadResumeCommandHandler : IRequestHandler<UploadResumeCommand, G
 {
     private readonly IApplicationDbContext _context;
     private readonly IBlobStorageService _blobStorage;
+    private readonly IResumeQueueService _queueService;
 
-    public UploadResumeCommandHandler(IApplicationDbContext context, IBlobStorageService blobStorage)
+    public UploadResumeCommandHandler(
+        IApplicationDbContext context, 
+        IBlobStorageService blobStorage,
+        IResumeQueueService queueService)
     {
         _context = context;
         _blobStorage = blobStorage;
+        _queueService = queueService;
     }
 
     public async Task<Guid> Handle(UploadResumeCommand request, CancellationToken cancellationToken)
@@ -32,6 +37,9 @@ public class UploadResumeCommandHandler : IRequestHandler<UploadResumeCommand, G
 
         _context.Resumes.Add(resume);
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Enqueue for async analysis
+        await _queueService.EnqueueResumeAnalysisAsync(resume.Id, request.UserId);
 
         return resume.Id;
     }

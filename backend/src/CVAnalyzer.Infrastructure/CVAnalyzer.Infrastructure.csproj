@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CVAnalyzer.Application\CVAnalyzer.Application.csproj" />
+    <ProjectReference Include="..\CVAnalyzer.AgentService\CVAnalyzer.AgentService.csproj" />
   </ItemGroup>
 
   <ItemGroup>

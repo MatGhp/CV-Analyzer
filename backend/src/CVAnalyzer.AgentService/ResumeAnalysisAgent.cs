@@ -71,6 +71,17 @@ public sealed class ResumeAnalysisAgent
         {
             Score = Math.Clamp(agentResponse.Score, 0, 100),
             OptimizedContent = agentResponse.OptimizedContent,
+            CandidateInfo = agentResponse.CandidateInfo != null ? new CandidateInfoDto
+            {
+                FullName = agentResponse.CandidateInfo.FullName,
+                Email = agentResponse.CandidateInfo.Email,
+                Phone = agentResponse.CandidateInfo.Phone,
+                Location = agentResponse.CandidateInfo.Location,
+                Skills = agentResponse.CandidateInfo.Skills,
+                YearsOfExperience = agentResponse.CandidateInfo.YearsOfExperience,
+                CurrentJobTitle = agentResponse.CandidateInfo.CurrentJobTitle,
+                Education = agentResponse.CandidateInfo.Education
+            } : null,
             Suggestions = agentResponse.Suggestions?.Select(s => new ResumeSuggestion
             {
                 Category = s.Category,
@@ -103,14 +114,20 @@ public sealed class ResumeAnalysisAgent
     }
 
     private const string SystemPrompt = """
-You are an expert resume analyst. Evaluate the candidate's resume and respond with JSON that includes a score from 0-100, a revised resume summary, and actionable suggestions. Suggestions should focus on ATS optimization, quantifying achievements, and aligning skills to target roles. Keep responses concise and professional.
+You are an expert resume analyst. Evaluate the candidate's resume and respond with JSON that includes:
+1. A score from 0-100 based on ATS compatibility, clarity, and achievement quantification
+2. A revised resume summary with improved wording
+3. Extracted candidate information (name, contact, skills, experience)
+4. Actionable suggestions focusing on ATS optimization, quantifying achievements, and aligning skills to target roles
+
+Keep responses concise and professional. Extract all available candidate information from the resume.
 """;
 
     private const string JsonSchema = """
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "required": ["score", "optimizedContent", "suggestions"],
+  "required": ["score", "optimizedContent", "suggestions", "candidateInfo"],
   "properties": {
     "score": {
       "type": "number",
@@ -119,6 +136,20 @@ You are an expert resume analyst. Evaluate the candidate's resume and respond wi
     },
     "optimizedContent": {
       "type": "string"
+    },
+    "candidateInfo": {
+      "type": "object",
+      "required": ["fullName", "email", "skills"],
+      "properties": {
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "location": { "type": "string" },
+        "skills": { "type": "string" },
+        "yearsOfExperience": { "type": "integer" },
+        "currentJobTitle": { "type": "string" },
+        "education": { "type": "string" }
+      }
     },
     "suggestions": {
       "type": "array",
@@ -143,16 +174,46 @@ You are an expert resume analyst. Evaluate the candidate's resume and respond wi
     private sealed class AgentResponse
     {
         [JsonPropertyName("score")]
-  public double Score { get; init; }
+        public double Score { get; init; }
 
         [JsonPropertyName("optimizedContent")]
         public string OptimizedContent { get; init; } = string.Empty;
 
+        [JsonPropertyName("candidateInfo")]
+        public AgentCandidateInfo? CandidateInfo { get; init; }
+
         [JsonPropertyName("suggestions")]
-  public IReadOnlyList<AgentSuggestion>? Suggestions { get; init; }
+        public IReadOnlyList<AgentSuggestion>? Suggestions { get; init; }
 
         [JsonPropertyName("metadata")]
-  public Dictionary<string, string>? Metadata { get; init; }
+        public Dictionary<string, string>? Metadata { get; init; }
+    }
+
+    private sealed class AgentCandidateInfo
+    {
+        [JsonPropertyName("fullName")]
+        public string FullName { get; init; } = string.Empty;
+
+        [JsonPropertyName("email")]
+        public string Email { get; init; } = string.Empty;
+
+        [JsonPropertyName("phone")]
+        public string? Phone { get; init; }
+
+        [JsonPropertyName("location")]
+        public string? Location { get; init; }
+
+        [JsonPropertyName("skills")]
+        public string Skills { get; init; } = string.Empty;
+
+        [JsonPropertyName("yearsOfExperience")]
+        public int? YearsOfExperience { get; init; }
+
+        [JsonPropertyName("currentJobTitle")]
+        public string? CurrentJobTitle { get; init; }
+
+        [JsonPropertyName("education")]
+        public string? Education { get; init; }
     }
 
     private sealed class AgentSuggestion

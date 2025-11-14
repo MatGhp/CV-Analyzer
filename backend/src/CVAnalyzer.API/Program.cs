@@ -38,6 +38,15 @@ builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
+// Ensure Azure Storage Queues exist
+using (var scope = app.Services.CreateScope())
+{
+    var queueServiceClient = scope.ServiceProvider.GetRequiredService<Azure.Storage.Queues.QueueServiceClient>();
+    await queueServiceClient.GetQueueClient("resume-analysis").CreateIfNotExistsAsync();
+    await queueServiceClient.GetQueueClient("resume-analysis-poison").CreateIfNotExistsAsync();
+    Log.Information("Azure Storage Queues initialized");
+}
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())

@@ -8,10 +8,12 @@ using CVAnalyzer.Application.Common.Interfaces;
 using CVAnalyzer.Infrastructure.Options;
 using CVAnalyzer.Infrastructure.Persistence;
 using CVAnalyzer.Infrastructure.Services;
+using CVAnalyzer.Infrastructure.BackgroundServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Azure.AI.OpenAI;
 
 namespace CVAnalyzer.Infrastructure;
 
@@ -21,6 +23,7 @@ public static class DependencyInjection
     {
         services.Configure<AzureStorageOptions>(options => configuration.GetSection(AzureStorageOptions.SectionName).Bind(options));
         services.Configure<DocumentIntelligenceOptions>(options => configuration.GetSection(DocumentIntelligenceOptions.SectionName).Bind(options));
+        services.Configure<QueueOptions>(options => configuration.GetSection(QueueOptions.SectionName).Bind(options));
 
         ConfigureDatabase(services, configuration);
         ConfigureAzureStorage(services, configuration);
@@ -30,7 +33,40 @@ public static class DependencyInjection
         services.AddScoped<IDocumentIntelligenceService, DocumentIntelligenceService>();
         services.AddScoped<IAIResumeAnalyzerService, AIResumeAnalyzerService>();
 
+        // Queue Service
+        services.AddScoped<IResumeQueueService, ResumeQueueService>();
+
+        // Resume Analysis Orchestrator
+        services.AddScoped<ResumeAnalysisOrchestrator>();
+
+        // Background Worker
+        services.AddHostedService<ResumeAnalysisWorker>();
+
+        // Configure AgentService
+        ConfigureAgentService(services, configuration);
+
         return services;
+    }
+
+    private static void ConfigureAgentService(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<AgentService.AgentServiceOptions>(
+            configuration.GetSection(AgentService.AgentServiceOptions.SectionName));
+
+        services.AddSingleton<OpenAIClient>(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<AgentService.AgentServiceOptions>>().Value;
+            if (string.IsNullOrWhiteSpace(options.Endpoint))
+            {
+                // For testing/development, return placeholder
+                throw new InvalidOperationException("Agent:Endpoint configuration value is required.");
+            }
+
+            var credential = new DefaultAzureCredential();
+            return new OpenAIClient(new Uri(options.Endpoint), credential);
+        });
+
+        services.AddSingleton<AgentService.ResumeAnalysisAgent>();
     }
 
     private static void ConfigureDatabase(IServiceCollection services, IConfiguration configuration)

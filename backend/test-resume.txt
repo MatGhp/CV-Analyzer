@@ -1,0 +1,31 @@
+John Doe
+Senior Software Engineer
+
+SUMMARY
+Experienced software engineer with 10+ years of expertise in .NET, Azure, and cloud architecture.
+Proven track record of delivering scalable enterprise solutions.
+
+EXPERIENCE
+Senior Software Engineer | Microsoft Corporation | 2018 - Present
+- Led development of cloud-native applications using Azure services
+- Mentored junior developers and conducted code reviews
+- Implemented CI/CD pipelines and DevOps best practices
+
+Software Engineer | Amazon Web Services | 2015 - 2018
+- Developed microservices using .NET Core and AWS Lambda
+- Designed RESTful APIs serving millions of requests daily
+- Optimized database performance resulting in 40% cost reduction
+
+EDUCATION
+Bachelor of Science in Computer Science
+University of Washington | 2011 - 2015
+
+SKILLS
+- Languages: C#, Python, JavaScript, TypeScript
+- Frameworks: .NET Core, ASP.NET, Angular, React
+- Cloud: Azure, AWS, Docker, Kubernetes
+- Databases: SQL Server, PostgreSQL, MongoDB, Redis
+
+CERTIFICATIONS
+- Microsoft Certified: Azure Solutions Architect Expert
+- AWS Certified Solutions Architect Professional

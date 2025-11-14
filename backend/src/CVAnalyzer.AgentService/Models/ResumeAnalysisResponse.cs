@@ -11,5 +11,7 @@ public sealed class ResumeAnalysisResponse
 
     public IReadOnlyList<ResumeSuggestion> Suggestions { get; init; } = Array.Empty<ResumeSuggestion>();
 
+    public CandidateInfoDto? CandidateInfo { get; init; }
+
     public IReadOnlyDictionary<string, string> Metadata { get; init; } = new Dictionary<string, string>();
 }
