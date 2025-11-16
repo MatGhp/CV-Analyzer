@@ -81,7 +81,7 @@ jobs:
         FRONTEND_URL=$(az containerapp show --name ca-cvanalyzer-frontend --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
         
         echo "Checking API: https://$API_URL/api/health"
-        echo "Checking Frontend: https://$FRONTEND_URL"
+        echo "Checking Frontend: https://$FRONTEND_URL/health"
         
         # Simple health check with 3 retries
         for i in 1 2 3; do
@@ -91,7 +91,7 @@ jobs:
             API_OK="FAIL"
           fi
           
-          if curl -sf "https://$FRONTEND_URL" > /dev/null; then
+          if curl -sf "https://$FRONTEND_URL/health" > /dev/null; then
             FRONTEND_OK="OK"
           else
             FRONTEND_OK="FAIL"
