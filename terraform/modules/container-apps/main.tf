@@ -70,11 +70,6 @@ resource "azurerm_container_app" "api" {
     type = "SystemAssigned"
   }
 
-  secret {
-    name  = "docintel-api-key"
-    value = var.document_intelligence_key
-  }
-
   dynamic "registry" {
     for_each = var.acr_login_server != "" ? [1] : []
     content {
@@ -169,8 +164,8 @@ resource "azurerm_container_app" "api" {
       }
 
       env {
-        name        = "DocumentIntelligence__ApiKey"
-        secret_name = "docintel-api-key"
+        name  = "DocumentIntelligence__UseManagedIdentity"
+        value = "true"
       }
     }
   }

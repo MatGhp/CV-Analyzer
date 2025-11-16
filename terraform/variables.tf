@@ -101,3 +101,12 @@ variable "max_replicas" {
     error_message = "Maximum replicas must be between 1 and 30"
   }
 }
+
+variable "sql_firewall_rules" {
+  description = "Additional SQL Server firewall rules (name = {start_ip, end_ip})"
+  type = map(object({
+    start_ip_address = string
+    end_ip_address   = string
+  }))
+  default = {}
+}

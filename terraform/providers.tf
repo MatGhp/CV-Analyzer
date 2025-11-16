@@ -8,17 +8,13 @@ terraform {
   }
 
   # Remote state backend in Azure Storage
-  backend "azurerm" {
-    resource_group_name  = "rg-terraform-state"
-    storage_account_name = "tfstatecvanalyzer"
-    container_name       = "tfstate"
-    key                  = "cvanalyzer-dev.tfstate"
-  }
+  # Configure via: terraform init -backend-config=backend-<env>.hcl
+  backend "azurerm" {}
 }
 
 provider "azurerm" {
   subscription_id = var.subscription_id
-  
+
   features {
     resource_group {
       prevent_deletion_if_contains_resources = false

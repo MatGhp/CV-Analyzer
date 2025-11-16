@@ -25,3 +25,11 @@ model_capacity        = 10 # 10k tokens/min for dev
 # Docker Image Configuration
 image_tag = "latest"
 
+# SQL Firewall Rules
+sql_firewall_rules = {
+  "AllowDevMachine" = {
+    start_ip_address = "176.3.53.114"
+    end_ip_address   = "176.3.53.114"
+  }
+}
+

@@ -102,12 +102,6 @@ variable "document_intelligence_endpoint" {
   type        = string
 }
 
-variable "document_intelligence_key" {
-  description = "Document Intelligence API key"
-  type        = string
-  sensitive   = true
-}
-
 variable "tags" {
   description = "Resource tags"
   type        = map(string)

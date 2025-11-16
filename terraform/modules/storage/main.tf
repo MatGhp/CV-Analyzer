@@ -11,11 +11,16 @@ locals {
 
 # Random suffix for globally unique storage account name
 resource "random_string" "storage_suffix" {
-  length  = 4
+  length  = 8
   special = false
   upper   = false
   lower   = true
   numeric = true
+
+  keepers = {
+    name_prefix = var.name_prefix
+    environment = var.environment
+  }
 }
 
 resource "azurerm_storage_account" "main" {
@@ -30,12 +35,12 @@ resource "azurerm_storage_account" "main" {
     versioning_enabled = true
 
     delete_retention_policy {
-      days = 7
+      days = var.environment == "prod" ? 30 : 7
     }
   }
 
   lifecycle {
-    prevent_destroy = false # Set to true in production
+    prevent_destroy = false # Cannot use variables in lifecycle blocks - set to true manually for prod
   }
 
   tags = var.tags

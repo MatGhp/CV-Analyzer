@@ -22,6 +22,7 @@ module "sql_database" {
   environment         = var.environment
   admin_username      = var.sql_admin_username
   admin_password      = var.sql_admin_password
+  firewall_rules      = var.sql_firewall_rules
 }
 
 # Azure Container Registry Module
@@ -93,7 +94,6 @@ module "container_apps" {
   storage_queue_endpoint         = module.storage.primary_queue_endpoint
   queue_config                   = module.storage.queue_names
   document_intelligence_endpoint = module.document_intelligence.endpoint
-  document_intelligence_key      = module.document_intelligence.primary_access_key
   min_replicas                   = var.min_replicas
   max_replicas                   = var.max_replicas
 

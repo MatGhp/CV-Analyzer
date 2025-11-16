@@ -21,7 +21,7 @@ resource "azurerm_mssql_server" "main" {
 resource "azurerm_mssql_database" "main" {
   name      = "cvanalyzer-db-${var.environment}"
   server_id = azurerm_mssql_server.main.id
-  sku_name  = "S0"
+  sku_name  = "Basic"
 
   # SECURITY: Enable threat detection for production
   threat_detection_policy {
@@ -42,4 +42,14 @@ resource "azurerm_mssql_firewall_rule" "allow_azure_services" {
   server_id        = azurerm_mssql_server.main.id
   start_ip_address = "0.0.0.0"
   end_ip_address   = "0.0.0.0"
+}
+
+# Dynamic firewall rules for specific IP addresses (dev/CI access)
+resource "azurerm_mssql_firewall_rule" "custom" {
+  for_each = var.firewall_rules
+
+  name             = each.key
+  server_id        = azurerm_mssql_server.main.id
+  start_ip_address = each.value.start_ip_address
+  end_ip_address   = each.value.end_ip_address
 }

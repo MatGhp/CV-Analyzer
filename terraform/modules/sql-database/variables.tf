@@ -25,3 +25,11 @@ variable "admin_password" {
   sensitive   = true
 }
 
+variable "firewall_rules" {
+  description = "Map of firewall rules to create (name = {start_ip, end_ip})"
+  type = map(object({
+    start_ip_address = string
+    end_ip_address   = string
+  }))
+  default = {}
+}

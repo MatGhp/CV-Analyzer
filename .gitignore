@@ -7,6 +7,12 @@ terraform/*.backup*
 terraform/*backup*
 terraform/*.lock.hcl
 
+# Terraform variables (except examples)
+terraform/*.tfvars
+!terraform/*.tfvars.example
+terraform/**/*.tfvars
+!terraform/**/*.tfvars.example
+
 # VS Code
 .vscode/
 
