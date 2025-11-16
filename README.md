@@ -21,30 +21,62 @@ Primary docs live under `docs/`. Start here:
 
 ```
 User → Angular Frontend (nginx)
-       ↓ (internal DNS: http://ca-cvanalyzer-api:8080)
-       .NET API + AgentService (CQRS + Microsoft Agent Framework)
+       ↓ (HTTP proxy: /api/*)
+       .NET API (CQRS + Clean Architecture)
        ↓
-       Azure OpenAI (GPT-4o deployment)
+       Integrated AgentService (Azure.AI.OpenAI SDK)
+       ↓
+       Azure OpenAI GPT-4o (Function Calling)
+       ↓
+       Azure Document Intelligence (text extraction)
        ↓
        Structured JSON resume analysis
 ```
 
-Internal communication uses Azure Container Apps internal DNS — no environment-specific URLs required.
+**Background Processing**: Queue-based async analysis via Azure Storage Queues + BackgroundService worker.
+**Local Dev**: Frontend proxy configuration routes `/api/*` to backend.
 
 ## 🚀 Quick Start (Local)
 
-```bash
-# From repo root
-docker-compose up -d
+### Prerequisites
+- .NET 9 SDK
+- Node.js 20+
+- Azure CLI (logged in: `az login`)
+- Azure resources deployed (see `terraform/`)
 
-# Frontend: http://localhost:4200
-# API (+ AgentService): http://localhost:5000
-# SQL Server: localhost:1433
+### Backend Setup
+```powershell
+cd backend/src/CVAnalyzer.API
+
+# Configure appsettings.Development.json with:
+# - Azure OpenAI endpoint and API key
+# - Azure Storage connection string
+# - Document Intelligence endpoint and key
+# - SQL connection string
+
+# Run migrations
+dotnet ef database update --project ../CVAnalyzer.Infrastructure
+
+# Start backend (port 5167)
+dotnet run
 ```
 
-> NOTE: Set sensitive values (e.g. SQL admin password) via a local environment variable or secret manager. Avoid committing lines showing removed example commands.
+### Frontend Setup
+```bash
+cd frontend
+npm install
+npm start  # Port 4200 with proxy to backend
+```
 
-For detailed setup (manual service runs, migrations, testing) see `docs/README.md`.
+### Docker Compose (Full Stack)
+```bash
+docker-compose up -d
+# Frontend: http://localhost:4200
+# API: http://localhost:5000
+# SQL: localhost:1433
+```
+
+For detailed setup see `RUNNING_LOCALLY.md`.
 
 ## 🔐 Security Snapshot
 

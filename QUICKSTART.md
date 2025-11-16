@@ -5,8 +5,11 @@ Get the CV Analyzer platform running in 5 minutes with Docker Compose.
 ## Prerequisites
 
 - **Docker Desktop** (with Docker Compose)
-- **Azure AI Foundry** project with GPT-4o deployment
-- **Azure credentials** (Service Principal or Managed Identity)
+- **Azure OpenAI** resource with GPT-4o deployment
+- **Azure Document Intelligence** resource
+- **Azure Storage Account** with blob and queue services
+- **Azure SQL Database**
+- **Azure credentials** (API keys for local dev, Managed Identity for production)
 
 ## Step 1: Clone and Configure
 
@@ -19,19 +22,45 @@ cd CV-Analyzer-Backend
 cp .env.example .env
 ```
 
-## Step 2: Configure Azure Credentials
+## Step 2: Configure Azure Services
 
-Edit `.env` file and update:
+Edit `backend/src/CVAnalyzer.API/appsettings.Development.json`:
 
-```bash
-# Required: Azure AI Foundry
-AI_FOUNDRY_ENDPOINT=https://your-ai-foundry.openai.azure.com/
-MODEL_DEPLOYMENT_NAME=gpt-4o
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=your-sql-server.database.windows.net;Database=cvanalyzer-db-dev;User Id=cvadmin_dev;Password=YOUR_PASSWORD;TrustServerCertificate=True;Encrypt=True"
+  },
+  "AzureStorage": {
+    "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=YOUR_STORAGE;AccountKey=YOUR_KEY;EndpointSuffix=core.windows.net"
+  },
+  "DocumentIntelligence": {
+    "Endpoint": "https://YOUR_DOCINTEL.cognitiveservices.azure.com/",
+    "ApiKey": "YOUR_KEY"
+  },
+  "Agent": {
+    "Endpoint": "https://swedencentral.api.cognitive.microsoft.com/",
+    "Deployment": "gpt-4o",
+    "ApiKey": "YOUR_OPENAI_KEY",
+    "Temperature": 0.7,
+    "TopP": 0.95
+  },
+  "Queue": {
+    "ResumeAnalysisQueueName": "resume-analysis"
+  }
+}
+```
 
-# Required: Azure Authentication
-AZURE_CLIENT_ID=your-client-id
-AZURE_TENANT_ID=your-tenant-id
-AZURE_CLIENT_SECRET=your-client-secret
+**Get Azure Keys**:
+```powershell
+# Azure OpenAI
+az cognitiveservices account keys list --name ai-cvanalyzer-dev --resource-group rg-cvanalyzer-dev
+
+# Document Intelligence
+az cognitiveservices account keys list --name cvanalyzer-dev-docintel --resource-group rg-cvanalyzer-dev
+
+# Storage Account
+az storage account keys list --account-name cvanalyzerdevs4b3 --resource-group rg-cvanalyzer-dev
 ```
 
 ## Step 3: Build and Run

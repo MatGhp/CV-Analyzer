@@ -9,7 +9,9 @@ References:
 
 ## What is it?
 
-Microsoft Agent Framework is a multi-language framework (C#/.NET and Python) for building agentic AI: single agents, multi-agent workflows, tools/functions, observability, and (optionally) graph-based orchestration. For .NET, it provides a thin, consistent API over different model providers and an opinionated “agent” abstraction you can run directly or wire into workflows.
+Microsoft Agent Framework is a multi-language framework (C#/.NET and Python) for building agentic AI: single agents, multi-agent workflows, tools/functions, observability, and (optionally) graph-based orchestration. For .NET, it provides a thin, consistent API over different model providers and an opinionated "agent" abstraction you can run directly or wire into workflows.
+
+> **⚠️ Current Implementation Note**: CV Analyzer currently uses `Azure.AI.OpenAI` SDK directly (not the Agent Framework). The AgentService project (`backend/src/CVAnalyzer.AgentService/ResumeAnalysisAgent.cs`) uses `OpenAIClient` with function calling for structured JSON responses. This document describes the future migration path to the Agent Framework for multi-agent orchestration.
 
 
 ## Install (our baseline)

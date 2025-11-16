@@ -110,7 +110,7 @@ All sensitive values stored as GitHub Secrets (Repository Settings > Secrets):
 ### Azure Key Vault Integration
 
 ```csharp
-// CORRECT: Use Key Vault via Managed Identity
+// CORRECT: Use Key Vault via Managed Identity (Production)
 if (configuration.GetValue<bool>("UseKeyVault"))
 {
     var keyVaultUri = configuration["KeyVault:Uri"];
@@ -118,6 +118,19 @@ if (configuration.GetValue<bool>("UseKeyVault"))
         new Uri(keyVaultUri),
         new DefaultAzureCredential());
 }
+
+// ACCEPTABLE: API Keys for Local Development Only
+// Store in appsettings.Development.json (git-ignored via .gitignore pattern)
+services.AddSingleton<OpenAIClient>(sp => {
+    var options = sp.GetRequiredService<IOptions<AgentServiceOptions>>().Value;
+    var endpoint = new Uri(options.Endpoint);
+    
+    // Use API key if provided (local dev), otherwise managed identity (production)
+    if (!string.IsNullOrEmpty(options.ApiKey)) {
+        return new OpenAIClient(endpoint, new AzureKeyCredential(options.ApiKey));
+    }
+    return new OpenAIClient(endpoint, new DefaultAzureCredential());
+});
 
 // WRONG: Hardcoded secrets
 // var connectionString = "Server=...;Password=MyPassword123"; ❌

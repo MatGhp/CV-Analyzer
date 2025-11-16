@@ -27,16 +27,32 @@ CV Analyzer is a two-service application for resume analysis using AI:
 ### Communication Flow
 
 ```
-User → Frontend (Angular/nginx)
-  ↓ (Internal DNS)
-  Backend API + AgentService (.NET 9)
+User → Frontend (Angular SPA)
+  ↓ (HTTP: /api/*)
+  Backend API (.NET 9 with Clean Architecture)
   ↓
-  Microsoft Agent Framework (C#)
+  Queue Message (Azure Storage Queue)
   ↓
-  Azure OpenAI (GPT-4o family)
+  Background Worker (BackgroundService)
+  ↓
+  Document Intelligence (PDF → Text extraction)
+  ↓
+  AgentService (Azure.AI.OpenAI SDK)
+  ↓
+  Azure OpenAI GPT-4o (Function Calling)
   ↓
   Structured Resume Analysis JSON
+  ↓
+  Database Update (EF Core)
+  ↓
+  Frontend Polls Status → Displays Results
 ```
+
+**Key Design Decisions**:
+- **Async Processing**: Long-running AI analysis handled via queue + background worker
+- **Function Calling**: Azure OpenAI responds with structured JSON via function call (not text content)
+- **Text Extraction**: Azure Document Intelligence extracts text from PDFs before AI analysis
+- **Status Polling**: Frontend polls `/api/resumes/{id}/status` endpoint for progress
 
 ---
 
@@ -78,6 +94,30 @@ API → Infrastructure → Application → Domain
 2. **Repository Pattern**: `IApplicationDbContext` abstraction
 3. **Validation Pipeline**: Automatic FluentValidation via MediatR behavior
 4. **Exception Handling**: Global middleware transforms exceptions to HTTP responses
+5. **Background Processing**: Queue-based async processing with BackgroundService
+6. **Function Calling**: Azure OpenAI structured outputs via deprecated Functions API
+
+### Background Processing Architecture
+
+**Components**:
+- `IResumeQueueService`: Enqueues resume analysis messages to Azure Storage Queue
+- `ResumeAnalysisWorker`: BackgroundService that polls queue every 30 seconds
+- `ResumeAnalysisOrchestrator`: Coordinates text extraction and AI analysis
+- `IAIResumeAnalyzerService`: Wraps AgentService for dependency injection
+
+**Flow**:
+1. Upload handler enqueues message: `{ ResumeId, UserId }`
+2. Worker polls queue, receives message with visibility timeout (60s)
+3. Orchestrator extracts text via Document Intelligence
+4. Orchestrator calls AgentService for AI analysis
+5. Results saved to database, message deleted from queue
+6. On error: Message becomes visible again (max 5 retries)
+
+**Retry Strategy**:
+- Max retries: 5
+- Visibility timeout: 60 seconds
+- Exponential backoff via Azure Storage Queue built-in mechanism
+- Failed messages moved to poison queue after max retries
 
 ### Technology Stack
 
@@ -85,9 +125,74 @@ API → Infrastructure → Application → Domain
 - **MediatR 13**: CQRS
 - **FluentValidation 8.7**: Request validation
 - **Entity Framework Core 9**: ORM
+- **Azure.AI.OpenAI 2.1.0**: Azure OpenAI SDK (function calling)
+- **Azure.AI.DocumentIntelligence**: PDF text extraction
+- **Azure.Storage.Queues**: Background job queue
 - **Azure.Identity**: Managed identity authentication
 - **Serilog 9**: Structured logging
 - **xUnit + NSubstitute**: Testing
+
+### AgentService Implementation
+
+**Location**: `backend/src/CVAnalyzer.AgentService/`
+
+**Key Components**:
+- `ResumeAnalysisAgent`: Core AI agent using Azure.AI.OpenAI SDK
+- `AgentServiceOptions`: Configuration (Endpoint, Deployment, ApiKey, Temperature, TopP)
+- `ResumeAnalysisRequest/Response`: Domain models for analysis
+
+**Function Calling Pattern**:
+```csharp
+var options = new ChatCompletionsOptions {
+    DeploymentName = "gpt-4o",
+    Functions = { new FunctionDefinition {
+        Name = "resume_analysis",
+        Parameters = BinaryData.FromString(JsonSchema)
+    }}
+};
+
+// Response comes as FunctionCall, not Content
+var message = completion.Value.Choices.First().Message;
+string jsonPayload = message.FunctionCall.Arguments;
+var result = JsonSerializer.Deserialize<AgentResponse>(jsonPayload);
+```
+
+**Why Function Calling?**
+- Guarantees structured JSON output (vs unreliable text parsing)
+- Built-in schema validation by Azure OpenAI
+- Better token efficiency than "respond with JSON" prompts
+
+### Document Intelligence Integration
+
+**Purpose**: Extract text from uploaded PDF resumes before AI analysis
+
+**Implementation**: `CVAnalyzer.Infrastructure/Services/DocumentIntelligenceService.cs`
+
+**Process**:
+1. Resume PDF uploaded to Azure Blob Storage
+2. Worker retrieves blob URL from database
+3. Document Intelligence analyzes document via URL
+4. Text content extracted (with page numbers, confidence scores)
+5. Extracted text passed to AgentService for AI analysis
+
+**Key Methods**:
+```csharp
+public async Task<string> ExtractTextFromPdfAsync(string blobUrl) {
+    var operation = await _client.AnalyzeDocumentFromUriAsync(
+        WaitUntil.Completed, 
+        "prebuilt-read",  // Built-in read model
+        new Uri(blobUrl)
+    );
+    
+    var result = operation.Value;
+    return string.Join("\n", result.Pages.SelectMany(p => p.Lines.Select(l => l.Content)));
+}
+```
+
+**Output Example**:
+```
+Extracted 6627 characters from 2 pages in document https://cvanalyzerdevs4b3.blob.core.windows.net/resumes/...
+```
 
 ### Database Schema
 
@@ -112,9 +217,32 @@ API → Infrastructure → Application → Domain
 
 ### API Endpoints
 
+**Health & Status**:
 - `GET /api/health` - Health check
-- `POST /api/resumes` - Upload resume
-- `GET /api/resumes/{id}` - Get resume with suggestions
+
+**Resume Management**:
+- `POST /api/resumes/upload` - Upload resume (multipart/form-data)
+  - Returns: `{ id: "<resume-guid>" }` with 202 Accepted
+- `GET /api/resumes/{id}` - Get resume details with suggestions
+- `GET /api/resumes/{id}/status` - Poll analysis status
+  - Returns: `{ status: "pending|processing|completed|failed", progress: 0-100 }`
+- `GET /api/resumes/{id}/analysis` - Get full analysis results
+  - Returns: Score, optimized content, candidate info, suggestions
+
+**Request/Response Models**:
+```csharp
+// Upload
+UploadResumeCommand { string UserId, string FileName, Stream FileStream }
+
+// Analysis Result
+ResumeAnalysisResponse {
+  int Score,              // 0-100 ATS score
+  string OptimizedContent,
+  CandidateInfoDto CandidateInfo,
+  ResumeSuggestion[] Suggestions,
+  Dictionary<string, string> Metadata
+}
+```
 
 ---
 

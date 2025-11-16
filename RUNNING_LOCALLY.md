@@ -9,12 +9,16 @@
 
 ## Configuration
 
-I've created `appsettings.Local.json` with your Azure resources:
+**Azure Resources (Dev Environment)**:
 
 - **Storage Account**: `cvanalyzerdevs4b3` (Sweden Central)
 - **Document Intelligence**: `cvanalyzer-dev-docintel`
 - **SQL Server**: `sql-cvanalyzer-dev.database.windows.net`
 - **Database**: `cvanalyzer-db-dev`
+- **Azure OpenAI**: `ai-cvanalyzer-dev` (AIServices account)
+  - Endpoint: `https://swedencentral.api.cognitive.microsoft.com/`
+  - Deployment: `gpt-4o`
+  - Model: `gpt-4o-2024-08-06`
 
 ## Setup Steps
 
@@ -44,10 +48,31 @@ dotnet ef database update --project ../CVAnalyzer.Infrastructure
 
 This will create the necessary tables in your Azure SQL Database.
 
-### 3. Start the API
+### 3. Configure Azure OpenAI
+
+Add to `appsettings.Development.json`:
+
+```json
+"Agent": {
+  "Endpoint": "https://swedencentral.api.cognitive.microsoft.com/",
+  "Deployment": "gpt-4o",
+  "ApiKey": "YOUR_API_KEY_HERE",
+  "Temperature": 0.7,
+  "TopP": 0.95
+}
+```
+
+**Get API Key**:
+```powershell
+az cognitiveservices account keys list --name ai-cvanalyzer-dev --resource-group rg-cvanalyzer-dev --query key1 -o tsv
+```
+
+> **Note**: For production, use Managed Identity (no API key needed). For local dev, API key is simpler.
+
+### 4. Start the API
 
 ```powershell
-# Set environment to use Local configuration
+# Set environment to use Development configuration
 $env:ASPNETCORE_ENVIRONMENT = "Local"
 
 # Run the API
