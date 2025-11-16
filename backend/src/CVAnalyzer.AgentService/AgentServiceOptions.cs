@@ -8,8 +8,6 @@ public sealed class AgentServiceOptions
 
     public string Deployment { get; set; } = "gpt-4o";
 
-    public string? ApiKey { get; set; }
-
     public double Temperature { get; set; } = 0.15;
 
     public double TopP { get; set; } = 0.95;

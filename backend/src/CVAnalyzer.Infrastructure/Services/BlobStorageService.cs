@@ -1,5 +1,6 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Sas;
+using Azure.Storage;
 using CVAnalyzer.Application.Common.Interfaces;
 using CVAnalyzer.Infrastructure.Options;
 using Microsoft.AspNetCore.StaticFiles;
@@ -87,9 +88,15 @@ public class BlobStorageService : IBlobStorageService
                 var sasToken = sasBuilder.ToSasQueryParameters(userDelegationKey.Value, _containerClient.AccountName).ToString();
                 return $"{blobClient.Uri}?{sasToken}";
             }
+            else if (blobClient.CanGenerateSasUri)
+            {
+                // Using connection string with account key - can generate SAS directly
+                var sasUri = blobClient.GenerateSasUri(sasBuilder);
+                return sasUri.ToString();
+            }
             else
             {
-                throw new InvalidOperationException("SAS token generation requires managed identity. Set UseManagedIdentity=true or use connection string that includes SAS token.");
+                throw new InvalidOperationException("SAS token generation requires either managed identity or connection string with account key.");
             }
         }
         catch (Exception ex)

@@ -21,9 +21,11 @@ public class ResumesController : ControllerBase
     [HttpPost("upload")]
     [ProducesResponseType(typeof(UploadResumeResponse), StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [RequestSizeLimit(10_485_760)] // 10MB limit
+    [RequestFormLimits(MultipartBodyLengthLimit = 10_485_760)]
     public async Task<IActionResult> Upload(
         [FromForm] IFormFile file,
-        [FromForm] string userId,
+        [FromForm] string? userId,
         CancellationToken cancellationToken)
     {
         if (file == null || file.Length == 0)
@@ -31,8 +33,13 @@ public class ResumesController : ControllerBase
             return BadRequest("No file uploaded");
         }
 
+        // Generate anonymous userId if not provided
+        var effectiveUserId = string.IsNullOrEmpty(userId) ? $"anonymous-{Guid.NewGuid():N}" : userId;
+
+        _logger.LogInformation("Uploading resume {FileName} for user {UserId}", file.FileName, effectiveUserId);
+
         using var stream = file.OpenReadStream();
-        var command = new UploadResumeCommand(userId, file.FileName, stream);
+        var command = new UploadResumeCommand(effectiveUserId, file.FileName, stream);
         var response = await _mediator.Send(command, cancellationToken);
 
         return AcceptedAtAction(

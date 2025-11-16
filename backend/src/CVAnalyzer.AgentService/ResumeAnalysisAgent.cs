@@ -39,19 +39,44 @@ public sealed class ResumeAnalysisAgent
         }
 
         _logger.LogInformation("Starting resume analysis for user {UserId}", request.UserId);
+        _logger.LogInformation("Using endpoint: {Endpoint}, deployment: {Deployment}", _options.Endpoint, _options.Deployment);
 
         var chatOptions = BuildChatOptions(request.Content);
 
+        _logger.LogInformation("Calling Azure OpenAI with {MessageCount} messages", chatOptions.Messages.Count);
         var completion = await _client.GetChatCompletionsAsync(chatOptions, cancellationToken);
-        var message = completion.Value.Choices.FirstOrDefault()?.Message;
+        _logger.LogInformation("Received completion with {ChoiceCount} choices", completion.Value.Choices?.Count ?? 0);
+        
+        var message = completion.Value.Choices?.FirstOrDefault()?.Message;
 
-        if (message is null || string.IsNullOrWhiteSpace(message.Content))
+        if (message is null)
         {
-            _logger.LogError("Agent response was empty.");
-            throw new InvalidOperationException("AI response was empty.");
+            _logger.LogError("No message in response. Choices count: {Count}", completion.Value.Choices?.Count ?? 0);
+            throw new InvalidOperationException("AI response contained no message.");
         }
 
-        var jsonPayload = message.Content;
+        // Handle function call response (when using Functions API)
+        string jsonPayload;
+        if (message.FunctionCall != null)
+        {
+            _logger.LogInformation("Response is a function call: {FunctionName}", message.FunctionCall.Name);
+            jsonPayload = message.FunctionCall.Arguments;
+            _logger.LogInformation("Function arguments length: {Length} chars", jsonPayload?.Length ?? 0);
+        }
+        else if (!string.IsNullOrWhiteSpace(message.Content))
+        {
+            _logger.LogInformation("Response is text content, length: {Length} chars", message.Content.Length);
+            jsonPayload = message.Content;
+        }
+        else
+        {
+            _logger.LogError("Agent response was empty. FinishReason: {FinishReason}, Content: '{Content}', ToolCalls: {ToolCallCount}", 
+                completion.Value.Choices?.FirstOrDefault()?.FinishReason,
+                message.Content ?? "(null)",
+                message.ToolCalls?.Count ?? 0);
+            
+            throw new InvalidOperationException("AI response was empty.");
+        }
         if (string.IsNullOrWhiteSpace(jsonPayload))
         {
             _logger.LogError("Agent response did not include text content.");
@@ -96,6 +121,7 @@ public sealed class ResumeAnalysisAgent
     {
         var options = new ChatCompletionsOptions
         {
+            DeploymentName = _options.Deployment,
             Temperature = (float)_options.Temperature,
             NucleusSamplingFactor = (float)_options.TopP,
             MaxTokens = 1200,

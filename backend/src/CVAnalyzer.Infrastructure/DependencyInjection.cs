@@ -55,10 +55,10 @@ public static class DependencyInjection
             var options = sp.GetRequiredService<IOptions<AgentService.AgentServiceOptions>>().Value;
             if (string.IsNullOrWhiteSpace(options.Endpoint))
             {
-                // For testing/development, return placeholder
                 throw new InvalidOperationException("Agent:Endpoint configuration value is required.");
             }
 
+            // Use DefaultAzureCredential for passwordless authentication (managed identity or Azure CLI)
             var credential = new DefaultAzureCredential();
             return new OpenAIClient(new Uri(options.Endpoint), credential);
         });

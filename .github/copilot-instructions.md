@@ -1,8 +1,8 @@
 ## CV Analyzer — Copilot instructions for code changes
 
-**Monorepo Structure**: This repository contains three main components - Angular Frontend, .NET Backend (Clean Architecture), and Python AI Service (FastAPI + Agent Framework). Follow service-specific patterns below.
+**Monorepo Structure**: This repository contains two main components - Angular Frontend and .NET Backend (Clean Architecture + integrated AgentService). Follow service-specific patterns below.
 
-**🔐 IMPORTANT: Before making ANY changes, read `.github/security-guardrails.md` for security rules and best practices.**
+**🔐 IMPORTANT: Before making ANY changes, read `docs/SECURITY.md` for security rules and best practices.**
 
 ---
 
@@ -304,7 +304,8 @@ This service follows Clean Architecture (Domain / Application / Infrastructure /
 - **Entry point**: `backend/src/CVAnalyzer.API/Program.cs` — registers `AddApplication()` and `AddInfrastructure(configuration)`, configures Serilog (rolling file + console), Swagger, CORS "AllowAll", and global `ExceptionHandlingMiddleware`.
 - **Core entities**: `Resume` (blob URL, content, score, status) and `Suggestion` (category, priority) in `backend/src/CVAnalyzer.Domain/Entities`.
 - **Exception handling**: All unhandled exceptions are caught by `ExceptionHandlingMiddleware`, which transforms `ValidationException` to 400 BadRequest with structured error details.
-- **AI Integration**: Calls Python AI Service via HTTP (`IAIResumeAnalyzerService` → `http://ai-service:8000/analyze`)
+- **AI Integration**: Integrated `CVAnalyzer.AgentService` project within backend uses Azure.AI.OpenAI SDK + Microsoft Agent Framework patterns with Azure OpenAI (GPT-4o deployment)
+- **Background Processing**: Queue-based async resume analysis via `ResumeAnalysisWorker` (BackgroundService) + Azure Storage Queues
 
 ### Implementing New Features (CQRS Pattern)
 
@@ -312,8 +313,8 @@ This service follows Clean Architecture (Domain / Application / Infrastructure /
   - Example: `UploadResumeCommand.cs` is a `record` implementing `IRequest<Guid>`.
   - Pattern: `public record MyCommand(...) : IRequest<TResult>;`
 - **Handler**: Same folder, named `MyCommandHandler.cs` implementing `IRequestHandler<MyCommand, TResult>`.
-  - Inject `IApplicationDbContext` for DB access, `IBlobStorageService` for blob ops, `IAIResumeAnalyzerService` for AI analysis.
-  - Example: `UploadResumeCommandHandler` creates Resume entity, calls blob service, saves to DB.
+  - Inject `IApplicationDbContext` for DB access, `IBlobStorageService` for blob ops, `IResumeQueueService` for queuing analysis, `IAIResumeAnalyzerService` for direct AI calls (orchestrator).
+  - Example: `UploadResumeCommandHandler` creates Resume entity, calls blob service, enqueues analysis request via `IResumeQueueService`, saves to DB.
 - **Validator**: Same folder, named `MyCommandValidator.cs` extending `AbstractValidator<MyCommand>`.
   - Example: `UploadResumeCommandValidator` checks UserId not empty, FileName ≤255 chars, FileStream not null.
   - Auto-discovered by `AddValidatorsFromAssembly` in `DependencyInjection.cs`.
@@ -328,7 +329,9 @@ This service follows Clean Architecture (Domain / Application / Infrastructure /
   - **No manual handler registration needed** — just add files in correct namespace.
 - **Infrastructure layer** (`backend/src/CVAnalyzer.Infrastructure/DependencyInjection.cs`):
   - Registers `ApplicationDbContext` with SQL Server connection string (from config or Key Vault).
-  - Scopes: `IApplicationDbContext`, `IBlobStorageService`, `IAIResumeAnalyzerService`.
+  - Scopes: `IApplicationDbContext`, `IBlobStorageService`, `IAIResumeAnalyzerService`, `IResumeQueueService`, `IDocumentIntelligenceService`.
+  - Singletons: `OpenAIClient`, `ResumeAnalysisAgent` (from AgentService project).
+  - Background services: `ResumeAnalysisWorker` (hosted service processing queue).
   - **Key Vault**: When `UseKeyVault=true`, fetches `DatabaseConnectionString` secret via `DefaultAzureCredential`. Fallback to config on error (logs warning).
   - **Local dev**: Set `UseKeyVault=false` and use `ConnectionStrings:DefaultConnection` from appsettings.
 
@@ -362,7 +365,12 @@ This service follows Clean Architecture (Domain / Application / Infrastructure /
   - `ConnectionStrings:DefaultConnection` — SQL connection string.
   - `UseKeyVault` (true/false) — enable Azure Key Vault secret retrieval.
   - `KeyVault:Uri` — Key Vault endpoint (e.g., `https://kv-cvanalyzer-dev.vault.azure.net/`).
-  - `AIService:BaseUrl` — Python AI service endpoint (e.g., `http://ai-service:8000`)
+  - `Agent:Endpoint` — Azure OpenAI endpoint (e.g., `https://<resource>.openai.azure.com/`)
+  - `Agent:Deployment` — Azure OpenAI deployment name (e.g., `gpt-4o`)
+  - `Agent:Temperature` — Temperature setting (default: 0.7)
+  - `Agent:TopP` — TopP/NucleusSampling (default: 0.95)
+  - `AzureStorage:ConnectionString` — Azure Storage connection string for blobs and queues
+  - `Queue:ResumeAnalysisQueueName` — Queue name for resume analysis (default: `resume-analysis`)
   - Serilog settings in `appsettings.json` / `appsettings.Development.json`.
 
 
@@ -377,9 +385,9 @@ This service follows Clean Architecture (Domain / Application / Infrastructure /
    - Uses LocalDB by default: `(localdb)\\mssqllocaldb`
 
 **Docker deployment:**
-- Local stack: `docker-compose up -d` (from repository root - runs .NET API + Python AI Service + SQL Server)
-  - .NET API: `http://localhost:5000`
-  - Python AI: `http://localhost:8000`
+- Local stack: `docker-compose up -d` (from repository root - runs Angular Frontend + .NET API + AgentService + SQL Server)
+  - Frontend: `http://localhost:4200`
+  - .NET API + AgentService: `http://localhost:5000`
   - SQL: `localhost:1433` (sa/<PASSWORD_PLACEHOLDER>)
   - Volume: `sqlserver-data` for persistence
 - Production: `docker build -f Dockerfile -t cvanalyzer-api .` (from backend/ directory)
@@ -474,7 +482,7 @@ public class MyCommandValidator : AbstractValidator<MyCommand>
 
 ### Security & Compliance
 
-- **Primary resource**: `.github/security-guardrails.md` — **READ BEFORE ANY CODE CHANGES**.
+- **Primary resource**: `docs/SECURITY.md` — **READ BEFORE ANY CODE CHANGES**.
 - **Key principles**:
   - Never commit secrets (use Key Vault or env vars)
   - Validate all inputs (FluentValidation)
@@ -483,188 +491,201 @@ public class MyCommandValidator : AbstractValidator<MyCommand>
 
 ---
 
-## Python AI Service (`ai-service/`)
+## .NET AgentService (`backend/src/CVAnalyzer.AgentService/`)
 
-FastAPI microservice using Microsoft Agent Framework for AI-powered resume analysis with GPT-4o.
+Integrated C# project using Azure.AI.OpenAI SDK for AI-powered resume analysis with GPT-4o.
 
 ### Architecture Overview
 
-- **Framework**: FastAPI + Uvicorn (async ASGI server)
-- **AI Integration**: Microsoft Agent Framework (preview) with Azure AI Foundry
-- **Model**: GPT-4o via Azure AI deployment
-- **Authentication**: DefaultAzureCredential (managed identity or service principal)
-- **Configuration**: Pydantic Settings with environment variables
-- **Deployment**: Docker container with non-root user
+- **Framework**: Minimal ASP.NET Core API (Kestrel)
+- **AI Integration**: Azure.AI.OpenAI SDK with Azure OpenAI (GPT-4o deployment)
+- **Authentication**: DefaultAzureCredential (managed identity or Azure CLI)
+- **Configuration**: IOptions pattern with `AgentServiceOptions`
+- **Deployment**: Runs as integrated service within backend container
 
 ### Key Components
 
-**Configuration (`ai-service/app/config.py`)**:
-- Singleton pattern with `@lru_cache`
-- Environment variables: `AI_FOUNDRY_ENDPOINT`, `MODEL_DEPLOYMENT_NAME`, Azure credentials
-- Validation via Pydantic Settings
+**Configuration** (`AgentServiceOptions.cs`):
+- Bind from `appsettings.json` section `Agent`
+- Properties: `Endpoint`, `Deployment`, `Temperature`, `TopP`
+- Validates presence of Endpoint and Deployment at runtime
 
-**Models (`ai-service/app/models.py`)**:
+**Models** (`Models/`):
 - `ResumeAnalysisRequest`: Validates content (10-10000 chars), user_id
-- `ResumeAnalysisResponse`: Score (0-100), optimized_content, suggestions[], metadata
-- `Suggestion`: Category, description, priority (1-5)
+- `ResumeAnalysisResponse`: Score (0-100), optimized_content, candidate_info, suggestions[], metadata
+- `CandidateInfoDto`: Extracted resume details (name, email, phone, skills, experience)
+- `ResumeSuggestion`: Category, description, priority (1-5)
 
-**Agent (`ai-service/app/agent.py`)**:
-- `ResumeAnalyzerAgent` class with Agent Framework integration
-- `initialize()`: Creates AzureAIAgentClient and ChatAgent
-- `analyze_resume()`: Main analysis method with structured output
+**Agent** (`ResumeAnalysisAgent.cs`):
+- Singleton service registered in DI container
+- Uses `OpenAIClient` with `DefaultAzureCredential`
+- `AnalyzeAsync()`: Main analysis method with structured JSON output
 - System instructions: Expert resume analyzer with ATS optimization, scoring criteria
-- Response parsing: JSON extraction with fallback error handling
-- Singleton via `get_agent()` function
+- Response parsing: JSON extraction with fallback error handling via `System.Text.Json`
 
-**FastAPI App (`ai-service/app/main.py`)**:
-- Lifespan context manager for agent init/cleanup
-- `POST /analyze`: Resume analysis endpoint
+**API** (`Program.cs`):
+- Minimal API endpoints (no controllers)
+- `GET /`: Service info endpoint
 - `GET /health`: Health check with AI connectivity status
-- CORS middleware, global exception handler
-- Structured logging
+- `POST /analyze`: Resume analysis endpoint with validation
+- Startup registration via `AgentStartup.ConfigureServices()`
 
 ### API Endpoints
 
 - `POST /analyze`: Analyze resume content
-  - Request: `{"content": "...", "user_id": "..."}`
-  - Response: Score, optimized content, suggestions, metadata
+  - Request: `{"content": "...", "userId": "..."}`
+  - Response: Score, optimized content, candidate info, suggestions, metadata
 - `GET /health`: Health check
-  - Response: `{"status": "healthy", "ai_connected": true/false}`
+  - Response: `{"status": "healthy", "aiConnected": true/false}`
 - `GET /`: Root endpoint with service info
 
 ### Development Workflow
 
 **Local development:**
 ```bash
-cd ai-service
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt --pre  # --pre for Agent Framework
-cp .env.example .env  # Configure Azure credentials
-python -m app.main
+cd backend/src/CVAnalyzer.AgentService
+dotnet run
+# Service runs on http://localhost:5001 (or configured port)
 ```
 
-**Docker:**
+**Docker (integrated with backend):**
 ```bash
 # From repository root
-docker-compose up ai-service
+docker-compose up -d
+# AgentService runs on same port as API (5000) but different path
 ```
 
 **Testing:**
 ```bash
-pytest
+cd backend
+dotnet test --filter "FullyQualifiedName~AgentService"
 ```
 
 ### Dependencies
 
 **Core:**
-- `fastapi==0.115.5` - Web framework
-- `uvicorn[standard]==0.32.1` - ASGI server
-- `agent-framework-azure-ai>=0.1.0` - Microsoft Agent Framework (preview - requires `--pre`)
-- `azure-identity==1.19.0` - Azure authentication
-- `pydantic==2.10.3`, `pydantic-settings==2.6.1` - Data validation and settings
+- `Azure.AI.OpenAI` — Azure OpenAI SDK
+- `Azure.Identity` — DefaultAzureCredential
+- `Microsoft.Extensions.Options` — Configuration binding
 
-**Development:**
-- `pytest`, `black`, `ruff`, `mypy`
+### Configuration
 
-### Environment Variables
-
-Required:
-- `AI_FOUNDRY_ENDPOINT`: Azure AI Foundry endpoint URL
-- `MODEL_DEPLOYMENT_NAME`: GPT-4o deployment name (default: gpt-4o)
-
-Authentication (choose one):
-- **Service Principal**: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET`
-- **Managed Identity**: Automatic in Azure (no credentials needed)
-
-Optional:
-- `LOG_LEVEL`: INFO (default), DEBUG, WARNING, ERROR
-
-### Integration with .NET Backend
-
-The .NET backend calls this service via HTTP:
-
-```csharp
-// CVAnalyzer.Infrastructure/Services/AIResumeAnalyzerService.cs
-var response = await _httpClient.PostAsJsonAsync("/analyze", request);
-```
-
-Configuration in appsettings.json:
+Required appsettings.json section:
 ```json
 {
-  "AIService": {
-    "BaseUrl": "http://ai-service:8000"  // Docker
-    // or "http://localhost:8000" for local dev
+  "Agent": {
+    "Endpoint": "https://<resource>.openai.azure.com/",
+    "Deployment": "gpt-4o",
+    "Temperature": 0.7,
+    "TopP": 0.95
   }
 }
 ```
 
+Authentication (choose one):
+- **Service Principal**: Set `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET` environment variables
+- **Managed Identity**: Automatic in Azure (no credentials needed)
+- **Azure CLI**: Run `az login` locally for development
+
+### Integration with Main Backend
+
+The backend infrastructure calls AgentService internally:
+
+```csharp
+// CVAnalyzer.Infrastructure/DependencyInjection.cs
+services.AddSingleton<OpenAIClient>(sp => {
+    var options = sp.GetRequiredService<IOptions<AgentServiceOptions>>().Value;
+    return new OpenAIClient(new Uri(options.Endpoint), new DefaultAzureCredential());
+});
+services.AddSingleton<ResumeAnalysisAgent>();
+
+// CVAnalyzer.Infrastructure/Services/AIResumeAnalyzerService.cs
+// Orchestrator calls ResumeAnalysisAgent.AnalyzeAsync() directly
+```
+
 ### Common Patterns
 
-**Agent Framework usage:**
-```python
-# Initialize agent
-client = AzureAIAgentClient(endpoint, credential)
-agent = client.agents.create_agent(
-    model="gpt-4o",
-    instructions="System prompt...",
-    temperature=0.7
-)
+**Agent usage:**
+```csharp
+// In handler or orchestrator
+var request = new ResumeAnalysisRequest 
+{ 
+    Content = resumeContent, 
+    UserId = userId 
+};
 
-# Run analysis
-thread = client.agents.create_thread()
-message = client.agents.create_message(thread.id, content)
-run = client.agents.create_and_process_run(thread.id, agent.id)
-response = client.agents.list_messages(thread.id).data[0].content[0].text.value
+var result = await _agent.AnalyzeAsync(request, cancellationToken);
+// Returns: ResumeAnalysisResponse with score, suggestions, candidate info
 ```
 
 **Error handling:**
-```python
-try:
-    result = await agent.analyze_resume(content, user_id)
-except Exception as e:
-    logger.error(f"Analysis failed: {e}")
-    raise HTTPException(status_code=500, detail="AI analysis failed")
+```csharp
+try
+{
+    var result = await _agent.AnalyzeAsync(request, ct);
+}
+catch (InvalidOperationException ex) when (ex.Message.Contains("not configured"))
+{
+    _logger.LogError("Agent not configured: {Message}", ex.Message);
+    throw;
+}
+catch (RequestFailedException ex)
+{
+    _logger.LogError(ex, "Azure OpenAI request failed");
+    throw new InvalidOperationException("AI analysis failed", ex);
+}
 ```
 
 ### Security
 
-- Non-root Docker user (UID 1000)
 - DefaultAzureCredential for passwordless auth
-- Input validation via Pydantic (10-10000 chars)
-- Structured logging (no sensitive data)
+- Input validation via DataAnnotations (10-10000 chars)
+- Structured logging (no sensitive data in logs)
+- Singleton OpenAIClient for connection pooling
 - Health check endpoint for monitoring
+
+### Background Processing
+
+Resume analysis is processed asynchronously:
+
+1. **Upload**: Handler creates Resume entity, uploads blob, enqueues analysis request
+2. **Queue**: `IResumeQueueService` adds message to Azure Storage Queue
+3. **Worker**: `ResumeAnalysisWorker` (BackgroundService) polls queue, calls orchestrator
+4. **Orchestrator**: `ResumeAnalysisOrchestrator` extracts text (Document Intelligence), analyzes (AgentService), saves results
+5. **Result**: Updates Resume entity with score, suggestions, optimized content
+
+See `backend/src/CVAnalyzer.Infrastructure/BackgroundServices/ResumeAnalysisWorker.cs` for implementation.
 
 ### Key Files for Reference
 
 | Purpose | File Path |
 |---------|-----------|
-| FastAPI application | `ai-service/app/main.py` |
-| Agent Framework logic | `ai-service/app/agent.py` |
-| Pydantic models | `ai-service/app/models.py` |
-| Configuration | `ai-service/app/config.py` |
-| Dependencies | `ai-service/requirements.txt` |
-| Dockerfile | `ai-service/Dockerfile` |
-| Documentation | `ai-service/README.md` |
+| AgentService API | `backend/src/CVAnalyzer.AgentService/Program.cs` |
+| Agent logic | `backend/src/CVAnalyzer.AgentService/ResumeAnalysisAgent.cs` |
+| Models | `backend/src/CVAnalyzer.AgentService/Models/` |
+| Configuration | `backend/src/CVAnalyzer.AgentService/AgentServiceOptions.cs` |
+| Startup | `backend/src/CVAnalyzer.AgentService/AgentStartup.cs` |
+| Background worker | `backend/src/CVAnalyzer.Infrastructure/BackgroundServices/ResumeAnalysisWorker.cs` |
+| Orchestrator | `backend/src/CVAnalyzer.Infrastructure/Services/ResumeAnalysisOrchestrator.cs` |
 
 ---
 
 ## Summary
 
-This monorepo contains three tightly integrated services:
+This monorepo contains two tightly integrated services:
 
 1. **Angular Frontend** (`frontend/`) - User interface with Angular 20, zoneless architecture
-2. **.NET Backend** (`backend/`) - Business logic with Clean Architecture + CQRS
-3. **Python AI Service** (`ai-service/`) - AI-powered resume analysis with GPT-4o
+2. **.NET Backend + AgentService** (`backend/`) - Business logic with Clean Architecture + CQRS + integrated AI analysis
 
 **Development workflow:**
 - Local: Run each service independently or use docker-compose
-- Production: Multi-container deployment with nginx reverse proxy
+- Production: Multi-container deployment with nginx reverse proxy (Azure Container Apps)
 
 **Key principles:**
 - Frontend: Signals for state, standalone components, lazy loading
 - Backend: CQRS with MediatR, automatic validation, strict architecture layers
-- AI Service: FastAPI async, Agent Framework, Pydantic validation
+- AgentService: Azure OpenAI SDK, DefaultAzureCredential, structured JSON output
+- Background processing: Queue-based async analysis with Document Intelligence + AI
 - All: Security-first (no secrets in code, input validation, error handling)
 
-**Need more detail?** Tell me which area to expand (e.g., testing patterns, EF migrations, Angular components, AI analyzer service, Terraform modules, CI/CD setup) and I'll provide concrete examples from the codebase.
+**Need more detail?** Tell me which area to expand (e.g., testing patterns, EF migrations, Angular components, AgentService integration, queue processing, Terraform modules, CI/CD setup) and I'll provide concrete examples from the codebase.
