@@ -1,19 +1,64 @@
-@if (analysis()) {
-  <div class="analysis-results" role="region" aria-label="Resume analysis results">
-    <!-- Score and Summary Section -->
-    <div class="score-section">
-      <div class="score-badge" [class]="scoreClass()">
-        <span class="score-value">{{ analysis()!.score }}</span>
-        <span class="score-label">/ 100</span>
+<div class="analysis-container">
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="loading-section">
+      <div class="spinner-large"></div>
+      <h2>Analyzing Your Resume</h2>
+      
+      @if (status()) {
+        <div class="progress-bar">
+          <div 
+            class="progress-fill" 
+            [style.width.%]="status()!.progress"
+          ></div>
+        </div>
+        <p class="status-text">
+          {{ status()!.status | titlecase }} - {{ status()!.progress }}%
+        </p>
+      }
+      
+      <p class="loading-message">
+        This may take up to 30 seconds. Please don't close this page.
+      </p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (errorMessage() && !isLoading()) {
+    <div class="error-section">
+      <div class="error-icon">⚠️</div>
+      <h2>Analysis Failed</h2>
+      <p>{{ errorMessage() }}</p>
+      <div class="error-actions">
+        <button class="btn btn-primary" (click)="retryAnalysis()">
+          Retry Analysis
+        </button>
+        <button class="btn btn-outline" (click)="goToUpload()">
+          Upload Another Resume
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Success State -->
+  @if (analysis() && !isLoading()) {
+    <div class="analysis-results" role="region" aria-label="Resume analysis results">
+      <h1 class="results-title">Analysis Complete!</h1>
+
+      <!-- Score and Summary Section -->
+      <div class="score-section">
+        <div class="score-badge" [class]="scoreClass()">
+          <span class="score-value">{{ analysis()!.score || 0 }}</span>
+          <span class="score-label">/ 100</span>
+        </div>
       </div>
 
-      @if (analysis()!.summary) {
-        <div class="summary">
-          <h3 class="summary-title">Analysis Summary</h3>
-          <p class="summary-text">{{ analysis()!.summary }}</p>
-        </div>
+      <!-- Candidate Info Card -->
+      @if (analysis()!.candidateInfo) {
+        <app-candidate-info-card 
+          [candidateInfo]="analysis()!.candidateInfo!"
+        />
       }
-    </div>
 
     <!-- Suggestions Section -->
     <div class="suggestions-section">
@@ -128,18 +173,19 @@
       </div>
     }
 
-    <!-- Actions -->
-    <div class="actions">
-      <button
-        type="button"
-        class="btn btn-outline"
-        (click)="uploadAnother.emit()">
-        <svg class="icon-action" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-        </svg>
-        Upload Another Resume
-      </button>
+      <!-- Actions -->
+      <div class="actions">
+        <button
+          type="button"
+          class="btn btn-outline"
+          (click)="goToUpload()">
+          <svg class="icon-action" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          Upload Another Resume
+        </button>
+      </div>
     </div>
-  </div>
-}
+  }
+</div>

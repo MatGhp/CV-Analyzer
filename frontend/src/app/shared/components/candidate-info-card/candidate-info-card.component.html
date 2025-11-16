@@ -1,0 +1,55 @@
+<div class="candidate-card">
+  <h2 class="candidate-name">{{ candidateInfo().fullName }}</h2>
+  
+  <div class="contact-info">
+    <p class="email">
+      <i class="icon-email">✉</i>
+      {{ candidateInfo().email }}
+    </p>
+    
+    @if (candidateInfo().phone) {
+      <p class="phone">
+        <i class="icon-phone">📞</i>
+        {{ candidateInfo().phone }}
+      </p>
+    }
+    
+    @if (candidateInfo().location) {
+      <p class="location">
+        <i class="icon-location">📍</i>
+        {{ candidateInfo().location }}
+      </p>
+    }
+  </div>
+
+  @if (candidateInfo().currentJobTitle) {
+    <div class="job-info">
+      <h3>Current Position</h3>
+      <p>{{ candidateInfo().currentJobTitle }}</p>
+      
+      @if (candidateInfo().yearsOfExperience) {
+        <p class="experience">
+          {{ candidateInfo().yearsOfExperience }} years of experience
+        </p>
+      }
+    </div>
+  }
+
+  @if (candidateInfo().skills.length > 0) {
+    <div class="skills-section">
+      <h3>Skills</h3>
+      <div class="skills-badges">
+        @for (skill of candidateInfo().skills; track skill) {
+          <span class="skill-badge">{{ skill }}</span>
+        }
+      </div>
+    </div>
+  }
+
+  @if (candidateInfo().education) {
+    <div class="education-section">
+      <h3>Education</h3>
+      <p>{{ candidateInfo().education }}</p>
+    </div>
+  }
+</div>

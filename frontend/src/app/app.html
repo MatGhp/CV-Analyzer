@@ -7,24 +7,9 @@
     </div>
   </header>
 
-  <!-- Main Content -->
+  <!-- Main Content with Router -->
   <main class="app-main">
-    <!-- Upload Section -->
-    <section class="section-upload">
-      <app-resume-upload
-        (analysisComplete)="onAnalysisComplete($event)">
-      </app-resume-upload>
-    </section>
-
-    <!-- Results Section -->
-    @if (analysisResult()) {
-      <section #resultsSection class="section-results">
-        <app-resume-analysis
-          [analysis]="analysisResult()!"
-          (uploadAnother)="onUploadAnother()">
-        </app-resume-analysis>
-      </section>
-    }
+    <router-outlet />
   </main>
 
   <!-- Footer -->

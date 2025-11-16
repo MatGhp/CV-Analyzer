@@ -37,7 +37,7 @@ export type SuggestionCategory =
 export type SuggestionPriority = 1 | 2 | 3 | 4 | 5;
 
 export interface UploadResumeRequest {
-  userId: string;
+  userId?: string;  // Optional - will be generated from resume if not provided
   file: File;
 }
 
@@ -45,9 +45,39 @@ export interface UploadResumeResponse {
   id: string;
 }
 
+// New interfaces for async processing (Task 5)
+export interface UploadResponse {
+  resumeId: string;
+  status: string;
+  message: string;
+}
+
+export interface ResumeStatusResponse {
+  resumeId: string;
+  status: 'pending' | 'processing' | 'complete' | 'failed';
+  progress: number;
+  errorMessage?: string;
+}
+
+export interface CandidateInfo {
+  fullName: string;
+  email: string;
+  phone?: string;
+  location?: string;
+  skills: string[];
+  yearsOfExperience?: number;
+  currentJobTitle?: string;
+  education?: string;
+}
+
 export interface AnalysisResponse {
-  score: number; // 0-100
-  summary?: string;
+  id: string;
+  fileName: string;
+  score?: number;
+  uploadedAt: string;
+  analyzedAt?: string;
+  status: string;
+  candidateInfo?: CandidateInfo;
   suggestions: SuggestionDto[];
   optimizedContent?: string;
   metadata?: AnalysisMetadata;

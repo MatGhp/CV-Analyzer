@@ -1,0 +1,89 @@
+.candidate-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  margin-bottom: 24px;
+
+  .candidate-name {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #2c3e50;
+  }
+
+  .contact-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    
+    p {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      color: #666;
+      
+      i {
+        color: #3498db;
+        font-style: normal;
+      }
+    }
+  }
+
+  .job-info,
+  .skills-section,
+  .education-section {
+    margin-bottom: 20px;
+    
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #34495e;
+    }
+    
+    p {
+      margin: 0;
+      color: #555;
+    }
+  }
+
+  .skills-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    
+    .skill-badge {
+      background: #ecf0f1;
+      color: #2c3e50;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+  }
+
+  .experience {
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-top: 4px;
+  }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .candidate-card {
+    padding: 16px;
+    
+    .candidate-name {
+      font-size: 20px;
+    }
+    
+    .contact-info {
+      flex-direction: column;
+      gap: 8px;
+    }
+  }
+}

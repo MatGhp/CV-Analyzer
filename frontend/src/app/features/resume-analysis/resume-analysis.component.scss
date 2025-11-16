@@ -1,10 +1,101 @@
-.analysis-results {
+.analysis-container {
   width: 100%;
   max-width: 64rem;
   margin: 0 auto;
+  padding: 2rem;
+}
+
+.loading-section,
+.error-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1rem;
+  min-height: 400px;
+}
+
+.spinner-large {
+  width: 64px;
+  height: 64px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top-color: hsl(var(--p));
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1.5rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.progress-bar {
+  width: 100%;
+  max-width: 400px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 1rem 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: hsl(var(--p));
+  transition: width 0.3s ease;
+}
+
+.status-text {
+  font-size: 1rem;
+  color: hsl(var(--bc) / 0.7);
+  margin: 0.5rem 0;
+}
+
+.loading-message {
+  font-size: 0.875rem;
+  color: hsl(var(--bc) / 0.6);
+  margin-top: 1rem;
+}
+
+.error-section {
+  .error-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: hsl(var(--bc) / 0.7);
+    margin-bottom: 1.5rem;
+  }
+
+  .error-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+.analysis-results {
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 2rem;
+}
+
+.results-title {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 1rem;
+  color: hsl(var(--p));
 }
 
 .score-section {

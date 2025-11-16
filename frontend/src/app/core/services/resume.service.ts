@@ -1,11 +1,14 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, interval } from 'rxjs';
+import { switchMap, takeWhile, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   Resume,
   UploadResumeRequest,
   UploadResumeResponse,
+  UploadResponse,
+  ResumeStatusResponse,
   AnalysisResponse,
   FileValidationResult,
   FILE_CONSTRAINTS
@@ -17,6 +20,8 @@ import {
 export class ResumeService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/resumes`;
+
+  isPolling = signal<boolean>(false);
 
   validateFile(file: File): FileValidationResult {
     if (file.size > FILE_CONSTRAINTS.maxSizeBytes) {
@@ -47,36 +52,60 @@ export class ResumeService {
   }
 
   /**
-   * Uploads a resume file
+   * Uploads resume file - returns 202 Accepted for async processing.
+   * UserId is optional and will be extracted from resume content if not provided.
    */
-  uploadResume(request: UploadResumeRequest): Observable<UploadResumeResponse> {
+  uploadResume(request: UploadResumeRequest): Observable<UploadResponse> {
     const formData = new FormData();
     formData.append('file', request.file);
-    formData.append('userId', request.userId);
+    
+    if (request.userId) {
+      formData.append('userId', request.userId);
+    }
 
-    return this.http.post<UploadResumeResponse>(
+    return this.http.post<UploadResponse>(
       `${this.apiUrl}/upload`,
       formData
     );
   }
 
+  checkStatus(resumeId: string): Observable<ResumeStatusResponse> {
+    return this.http.get<ResumeStatusResponse>(`${this.apiUrl}/${resumeId}/status`);
+  }
+
   /**
-   * Gets a single resume by ID
+   * Polls resume status every 2 seconds until complete or failed.
+   * Emits final status before completing the observable.
    */
+  pollResumeStatus(resumeId: string): Observable<ResumeStatusResponse> {
+    this.isPolling.set(true);
+
+    return interval(2000).pipe(
+      switchMap(() => this.checkStatus(resumeId)),
+      tap(status => {
+        if (status.status === 'complete' || status.status === 'failed') {
+          this.isPolling.set(false);
+        }
+      }),
+      takeWhile(
+        status => status.status !== 'complete' && status.status !== 'failed',
+        true
+      )
+    );
+  }
+
+  getAnalysis(resumeId: string): Observable<AnalysisResponse> {
+    return this.http.get<AnalysisResponse>(`${this.apiUrl}/${resumeId}/analysis`);
+  }
+
   getResume(id: string): Observable<Resume> {
     return this.http.get<Resume>(`${this.apiUrl}/${id}`);
   }
 
-  /**
-   * Gets all resumes for a user
-   */
   getUserResumes(userId: string): Observable<Resume[]> {
     return this.http.get<Resume[]>(`${this.apiUrl}/user/${userId}`);
   }
 
-  /**
-   * Triggers AI analysis for a resume
-   */
   analyzeResume(id: string): Observable<AnalysisResponse> {
     return this.http.post<AnalysisResponse>(
       `${this.apiUrl}/${id}/analyze`,

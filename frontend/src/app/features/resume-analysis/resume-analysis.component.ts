@@ -1,32 +1,48 @@
-import { Component, input, output, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { AnalysisResponse, SuggestionDto } from '../../core/models/resume.model';
+import { ActivatedRoute, Router } from '@angular/router';
+import { AnalysisResponse, SuggestionDto, ResumeStatusResponse } from '../../core/models/resume.model';
+import { ResumeService } from '../../core/services/resume.service';
+import { CandidateInfoCardComponent } from '../../shared/components/candidate-info-card/candidate-info-card.component';
 import { UI_TIMING, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../../core/constants/ui.constants';
 
 @Component({
   selector: 'app-resume-analysis',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CandidateInfoCardComponent],
   templateUrl: './resume-analysis.component.html',
   styleUrl: './resume-analysis.component.scss'
 })
-export class ResumeAnalysisComponent {
-  analysis = input.required<AnalysisResponse>();
-  uploadAnother = output<void>();
+export class ResumeAnalysisComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly resumeService = inject(ResumeService);
+
+  resumeId = signal<string>('');
+  status = signal<ResumeStatusResponse | null>(null);
+  analysis = signal<AnalysisResponse | null>(null);
+  isLoading = signal<boolean>(true);
+  errorMessage = signal<string | null>(null);
 
   showOptimized = signal(false);
   copied = signal(false);
   copyError = signal<string | null>(null);
 
   scoreClass = computed(() => {
-    const score = this.analysis().score;
+    const analysisData = this.analysis();
+    if (!analysisData?.score) return 'score-medium';
+    const score = analysisData.score;
     if (score < 50) return 'score-low';
     if (score < 75) return 'score-medium';
     return 'score-high';
   });
 
   suggestionsByCategory = computed(() => {
-    const suggestions = this.analysis().suggestions;
+    const analysisData = this.analysis();
+    if (!analysisData) return [];
+    
+    const suggestions = analysisData.suggestions;
     const grouped = new Map<string, SuggestionDto[]>();
 
     suggestions.forEach(suggestion => {
@@ -51,12 +67,75 @@ export class ResumeAnalysisComponent {
     this.copied() ? SUCCESS_MESSAGES.COPIED : SUCCESS_MESSAGES.COPY_TO_CLIPBOARD
   );
 
+  ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) {
+      this.errorMessage.set('Invalid resume ID');
+      this.isLoading.set(false);
+      return;
+    }
+
+    this.resumeId.set(id);
+    this.startPolling();
+  }
+
+  private startPolling(): void {
+    this.resumeService.pollResumeStatus(this.resumeId())
+      .pipe(takeUntilDestroyed())
+      .subscribe({
+        next: (statusUpdate) => {
+          this.status.set(statusUpdate);
+          
+          if (statusUpdate.status === 'complete') {
+            this.loadAnalysis();
+          }
+          
+          if (statusUpdate.status === 'failed') {
+            this.errorMessage.set(statusUpdate.errorMessage || 'Analysis failed');
+            this.isLoading.set(false);
+          }
+        },
+        error: (error) => {
+          console.error('Polling error:', error);
+          this.errorMessage.set('Failed to check status. Please refresh the page.');
+          this.isLoading.set(false);
+        }
+      });
+  }
+
+  private loadAnalysis(): void {
+    this.resumeService.getAnalysis(this.resumeId())
+      .pipe(takeUntilDestroyed())
+      .subscribe({
+        next: (analysisData) => {
+          this.analysis.set(analysisData);
+          this.isLoading.set(false);
+        },
+        error: (error) => {
+          console.error('Failed to load analysis:', error);
+          this.errorMessage.set('Failed to load analysis results');
+          this.isLoading.set(false);
+        }
+      });
+  }
+
+  retryAnalysis(): void {
+    this.errorMessage.set(null);
+    this.isLoading.set(true);
+    this.startPolling();
+  }
+
+  goToUpload(): void {
+    this.router.navigate(['/upload']);
+  }
+
   toggleOptimized(): void {
     this.showOptimized.update(v => !v);
   }
 
   async copyToClipboard(): Promise<void> {
-    const content = this.analysis().optimizedContent;
+    const analysisData = this.analysis();
+    const content = analysisData?.optimizedContent;
     if (!content) return;
 
     try {
