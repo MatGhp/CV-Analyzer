@@ -1,6 +1,16 @@
 # Git Workflow – CV Analyzer Monorepo
 
-This guide streamlines daily Git usage across the Angular frontend, .NET backend, Python AI service, and Terraform infrastructure.
+**Audience**: All developers contributing to CV Analyzer
+
+**Key Principles**:
+- Short-lived feature branches off `main`
+- Conventional Commits format
+- Daily rebasing to avoid merge conflicts
+- Never commit secrets (pre-commit hook enforced)
+
+This guide streamlines daily Git usage across Angular frontend, .NET backend, AgentService, and Terraform infrastructure.
+
+---
 
 ---
 ## 1. Branching Strategy

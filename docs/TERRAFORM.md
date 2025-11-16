@@ -144,10 +144,13 @@ Provisions AI Hub and GPT-4o model deployment.
 Creates Container Apps Environment with Frontend and API applications.
 
 **Resources:**
-- Container Apps Environment (Consumption plan)
-- Frontend Container App (nginx + Angular)
-- API Container App (.NET 9)
-- System-assigned managed identities
+- Container Apps Environment (Consumption plan with internal DNS)
+- Frontend Container App (nginx + Angular 20)
+- API Container App (.NET 10 with integrated AgentService)
+- System-assigned managed identities for Azure OpenAI access
+- Internal networking (apps communicate via DNS, no external URLs)
+
+**Key Feature**: Apps in same environment use internal DNS (e.g., `http://ca-cvanalyzer-api:8080`) - no configuration needed across dev/test/prod
 - ACR pull role assignments
 
 **Outputs:**

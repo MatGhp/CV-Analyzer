@@ -6,12 +6,40 @@ References:
 - Official repo: https://github.com/microsoft/agent-framework
 - MS Learn docs: https://learn.microsoft.com/agent-framework/
 
+### 🚀 Future Evolution: Durable Agents
+
+The current implementation will be upgraded to **Microsoft Agent Framework Durable Agents** for stateful, fault-tolerant orchestrations:
+
+**Key Benefits**:
+- ✅ Stateful conversation threads with automatic persistence
+- ✅ Multi-agent orchestrations (specialized agents for suggestions, optimization)
+- ✅ Fault-tolerant workflows that survive crashes
+- ✅ Visual debugging via Durable Task Scheduler dashboard
+- ✅ Serverless scaling (Azure Functions Flex Consumption, 0-1000s instances)
+- ✅ 30-40% cost reduction with pay-per-execution pricing
+
+**See**: [Durable Agents Roadmap](DURABLE_AGENTS_ROADMAP.md) for detailed 3-4 week migration plan.
+
 
 ## What is it?
 
 Microsoft Agent Framework is a multi-language framework (C#/.NET and Python) for building agentic AI: single agents, multi-agent workflows, tools/functions, observability, and (optionally) graph-based orchestration. For .NET, it provides a thin, consistent API over different model providers and an opinionated "agent" abstraction you can run directly or wire into workflows.
 
-> **⚠️ Current Implementation Note**: CV Analyzer currently uses `Azure.AI.OpenAI` SDK directly (not the Agent Framework). The AgentService project (`backend/src/CVAnalyzer.AgentService/ResumeAnalysisAgent.cs`) uses `OpenAIClient` with function calling for structured JSON responses. This document describes the future migration path to the Agent Framework for multi-agent orchestration.
+### ⚠️ Current Implementation Status
+
+**CV Analyzer v1.0 (Production)**:
+- Uses **`Azure.AI.OpenAI` SDK directly** (NOT Microsoft Agent Framework)
+- Simple single-agent pattern with function calling for structured JSON
+- Queue-based async processing with custom BackgroundService
+- Location: `backend/src/CVAnalyzer.AgentService/ResumeAnalysisAgent.cs`
+
+**Why This Document Exists**:
+This guide documents the **future migration path** to Microsoft Agent Framework for:
+- Multi-agent orchestrations (specialized agents for suggestions, optimization)
+- Stateful conversation threads (iterative refinement)
+- Durable workflows with fault tolerance
+
+**See**: [Durable Agents Roadmap](DURABLE_AGENTS_ROADMAP.md) for detailed 3-4 week migration plan
 
 
 ## Install (our baseline)

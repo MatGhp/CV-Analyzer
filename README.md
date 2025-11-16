@@ -1,6 +1,6 @@
 # CV Analyzer
 
-Enterprise-grade resume optimization platform powered by Angular 20 (frontend) and .NET 9 (backend + integrated Agent Service using Microsoft Agent Framework + Azure OpenAI).
+Enterprise-grade resume optimization platform powered by Angular 20 (frontend) and .NET 10 (backend + integrated Agent Service using Azure.AI.OpenAI SDK + Azure OpenAI GPT-4o).
 
 ## 📚 Documentation Index
 
@@ -94,6 +94,23 @@ Backend & Agent logic:
 cd backend
 dotnet test
 ```
+
+## 🚀 Future Roadmap
+
+### Durable Agents Migration (Planned)
+
+Upgrade to Microsoft Agent Framework's **Durable Agents** for stateful multi-agent orchestrations:
+
+**Key Benefits**:
+- ✅ Conversational refinement (multi-turn resume improvements)
+- ✅ Fault-tolerant workflows (survive crashes/restarts)
+- ✅ Auto-scaling (0-1000s instances)
+- ✅ Visual debugging dashboard
+- ✅ 30-40% cost reduction
+
+**Timeline**: 3-4 weeks | **Documentation**: [`docs/DURABLE_AGENTS_ROADMAP.md`](docs/DURABLE_AGENTS_ROADMAP.md)
+
+---
 
 ## 🤝 Contributing
 

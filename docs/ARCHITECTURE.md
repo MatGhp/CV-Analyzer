@@ -7,6 +7,7 @@
 ## Table of Contents
 
 - [System Overview](#system-overview)
+- [Architecture Evolution](#architecture-evolution)
 - [Backend Architecture (.NET)](#backend-architecture-net)
 - [Frontend Architecture (Angular)](#frontend-architecture-angular)
 - [Infrastructure Architecture (Azure)](#infrastructure-architecture-azure)
@@ -15,14 +16,41 @@
 
 ---
 
+## Architecture Evolution
+
+### Current State (v1.0)
+The application uses a **queue-based background processing architecture** with Azure Storage Queues and a custom `ResumeAnalysisWorker` BackgroundService. This provides reliable async processing but requires manual state management.
+
+### Future State (v2.0 - Planned)
+Migration to **Microsoft Agent Framework Durable Agents** will enable:
+- 🔄 Stateful multi-turn conversations (iterative resume refinement)
+- 🤝 Multi-agent orchestrations (specialized agents for different tasks)
+- 💪 Fault-tolerant workflows with automatic checkpointing
+- 🔍 Visual debugging via Durable Task Scheduler dashboard
+- ⚡ Serverless scaling (Azure Functions Flex Consumption)
+- 💰 30-40% cost reduction
+
+**See**: [Durable Agents Roadmap](DURABLE_AGENTS_ROADMAP.md) for detailed migration plan (3-4 week effort).
+
+---
+
 ## System Overview
 
-CV Analyzer is a two-service application for resume analysis using AI:
+CV Analyzer is a **three-tier application** for AI-powered resume analysis:
 
-- **Frontend**: Angular 20 SPA (served by nginx)
-- **Backend**: .NET 9 API + integrated Agent Service (Microsoft Agent Framework + Azure OpenAI)
-- **Database**: Azure SQL Database
-- **Infrastructure**: Azure Container Apps + Azure OpenAI (via AI Foundry / Azure OpenAI resource)
+### Components
+- **Frontend**: Angular 20 SPA (zoneless architecture, standalone components)
+- **Backend**: .NET 10 API with Clean Architecture + CQRS pattern
+- **AI Service**: Integrated AgentService using Azure.AI.OpenAI SDK (not Microsoft Agent Framework yet)
+- **Database**: Azure SQL Database (EF Core)
+- **Queue**: Azure Storage Queues (async background processing)
+- **Blob Storage**: Azure Storage (resume file storage)
+- **AI Model**: Azure OpenAI GPT-4o via Azure AI Foundry
+
+### Architecture Pattern
+**Current (v1.0)**: Queue-based async processing with custom BackgroundService worker
+
+**Planned (v2.0)**: Durable Agents with stateful orchestrations (see [Durable Agents Roadmap](DURABLE_AGENTS_ROADMAP.md))
 
 ### Communication Flow
 

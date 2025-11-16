@@ -18,7 +18,12 @@ Your starting point for all project docs. Each guide is concise, actionable, and
 
 - **Golden Architecture**: `docs/GOLDEN_ARCHITECTURE.md` — Microsoft's enterprise agentic architecture roadmap
 - **Agent Framework**: `docs/AGENT_FRAMEWORK.md` — Migration path to Microsoft Agent Framework
+- **Durable Agents Roadmap**: `docs/DURABLE_AGENTS_ROADMAP.md` — Upgrade to stateful multi-agent orchestrations (3-4 week plan)
 - **Refactoring Summary**: `docs/REFACTORING_SUMMARY.md` — KISS improvements & rationale
+
+## Documentation Quality
+
+- **Documentation Review Summary**: `docs/DOCUMENTATION_REVIEW_SUMMARY.md` — Expert review results (Nov 16, 2025) - Quality score 98/100
 
 ## Quick Starts
 

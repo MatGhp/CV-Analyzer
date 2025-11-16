@@ -4,6 +4,12 @@
 
 **🔐 IMPORTANT: Before making ANY changes, read `docs/SECURITY.md` for security rules and best practices.**
 
+### 📋 Table of Contents
+
+1. [Angular Frontend](#angular-frontend-frontend) - Modern Angular 20 with signals & zoneless architecture
+2. [.NET Backend Service](#net-backend-service-backend) - Clean Architecture with CQRS pattern
+3. [.NET AgentService](#net-agentservice-backendsrccvanalyzeragentservice) - AI-powered resume analysis
+
 ---
 
 ## Angular Frontend (`frontend/`)
@@ -40,6 +46,8 @@ frontend/src/app/
 ```
 
 ### Creating New Features
+
+**Step-by-step guide for adding new Angular features following best practices**
 
 **1. Feature Component (lazy-loaded):**
 ```bash
@@ -163,8 +171,8 @@ export const environment = {
 ### Nginx Configuration
 
 **Key features in `frontend/nginx.conf`:**
-- **Reverse proxy** to backend services (`/api/` → `http://api:8080/api/`)
-- **AI service proxy** (`/ai/` → `http://ai-service:8000/`)
+- **Reverse proxy** to backend services (`/api/` → `http://api:5000/api/`)
+- **Note**: AgentService is integrated within backend, not a separate service
 - **SPA routing**: Serves `index.html` for all routes (`try_files $uri $uri/ /index.html`)
 - **Static asset caching**: 1 year for JS/CSS/images
 - **Security headers**: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection
@@ -270,8 +278,9 @@ npm start
 # From repository root
 docker-compose up -d
 # Frontend: http://localhost:4200
-# Backend: http://localhost:5000
-# AI Service: http://localhost:8000
+# Backend + AgentService: http://localhost:5000
+# SQL Server: localhost:1433
+# All services use Azure Storage (connection string in appsettings)
 ```
 
 ### Key Files for Reference
@@ -296,16 +305,17 @@ docker-compose up -d
 
 ## .NET Backend Service (`backend/`)
 
-This service follows Clean Architecture (Domain / Application / Infrastructure / API) using .NET 9, MediatR (CQRS), FluentValidation and EF Core.
+This service follows Clean Architecture (Domain / Application / Infrastructure / API) using .NET 10, MediatR (CQRS), FluentValidation and EF Core.
 
 ### Architecture Overview
 
+- **Framework Version**: .NET 10 (all projects)
 - **Layer dependencies**: API → Infrastructure → Application → Domain (strict one-way). Domain has zero dependencies.
 - **Entry point**: `backend/src/CVAnalyzer.API/Program.cs` — registers `AddApplication()` and `AddInfrastructure(configuration)`, configures Serilog (rolling file + console), Swagger, CORS "AllowAll", and global `ExceptionHandlingMiddleware`.
-- **Core entities**: `Resume` (blob URL, content, score, status) and `Suggestion` (category, priority) in `backend/src/CVAnalyzer.Domain/Entities`.
+- **Core entities**: `Resume` (blob URL, content, score, status), `CandidateInfo` (extracted resume details), and `Suggestion` (category, priority) in `backend/src/CVAnalyzer.Domain/Entities`.
 - **Exception handling**: All unhandled exceptions are caught by `ExceptionHandlingMiddleware`, which transforms `ValidationException` to 400 BadRequest with structured error details.
-- **AI Integration**: Integrated `CVAnalyzer.AgentService` project within backend uses Azure.AI.OpenAI SDK + Microsoft Agent Framework patterns with Azure OpenAI (GPT-4o deployment)
-- **Background Processing**: Queue-based async resume analysis via `ResumeAnalysisWorker` (BackgroundService) + Azure Storage Queues
+- **AI Integration**: Integrated `CVAnalyzer.AgentService` project within backend uses Azure.AI.OpenAI SDK (v1.0.0-beta.13) with Azure OpenAI GPT-4o deployment
+- **Background Processing**: Queue-based async resume analysis via `ResumeAnalysisWorker` (BackgroundService) + Azure Storage Queues + Document Intelligence
 
 ### Implementing New Features (CQRS Pattern)
 
@@ -582,10 +592,13 @@ Required appsettings.json section:
 }
 ```
 
-Authentication (choose one):
-- **Service Principal**: Set `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET` environment variables
-- **Managed Identity**: Automatic in Azure (no credentials needed)
-- **Azure CLI**: Run `az login` locally for development
+**Authentication** (DefaultAzureCredential auto-resolves in this order):
+1. **Environment Variables**: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET` (service principal)
+2. **Managed Identity**: Automatic in Azure Container Apps/App Service (production)
+3. **Azure CLI**: `az login` credentials (local development)
+4. **Visual Studio/VS Code**: Cached credentials from IDE
+
+**Note**: API keys are NOT supported for security reasons. All authentication uses DefaultAzureCredential only.
 
 ### Integration with Main Backend
 

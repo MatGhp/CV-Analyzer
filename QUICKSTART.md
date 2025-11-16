@@ -1,15 +1,26 @@
 # Quick Start Guide - CV Analyzer Platform
 
-Get the CV Analyzer platform running in 5 minutes with Docker Compose.
+**Goal**: Get the CV Analyzer platform running in 5 minutes with Docker Compose
+
+**For detailed local setup**, see [`RUNNING_LOCALLY.md`](RUNNING_LOCALLY.md)
+
+---
 
 ## Prerequisites
 
-- **Docker Desktop** (with Docker Compose)
+### Required Software
+- **Docker Desktop** (with Docker Compose v2+)
+- **Git** for cloning the repository
+
+### Required Azure Resources
 - **Azure OpenAI** resource with GPT-4o deployment
 - **Azure Document Intelligence** resource
 - **Azure Storage Account** with blob and queue services
 - **Azure SQL Database**
-- **Azure credentials** (API keys for local dev, Managed Identity for production)
+
+### Authentication
+- **Local Development**: API keys (simpler, documented below)
+- **Production**: Managed Identity (no keys needed)
 
 ## Step 1: Clone and Configure
 

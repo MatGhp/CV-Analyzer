@@ -70,7 +70,7 @@ Before committing code, verify:
 
 - [ ] No hardcoded secrets or credentials
 - [ ] All user input is validated
-- [ ] SQL queries use parameterization
+- [ ] SQL queries use parameterization (EF Core handles this)
 - [ ] File uploads are validated (type, size, content)
 - [ ] Authentication/authorization properly implemented
 - [ ] Sensitive data not logged
@@ -78,7 +78,18 @@ Before committing code, verify:
 - [ ] Terraform: No hardcoded subscription IDs
 - [ ] Terraform: Sensitive variables marked `sensitive = true`
 - [ ] Terraform: Production resources have security controls
-- [ ] Terraform: `.tfvars` files not committed (only examples)
+- [ ] Terraform: `.tfvars` files not committed (only `.tfvars.example`)
+
+### Common Security Issues
+
+**Issue**: Pre-commit hook blocks legitimate placeholder
+**Solution**: Use approved placeholder format: `<PASSWORD_PLACEHOLDER>`, `YOUR_API_KEY_HERE`, `YOUR_PASSWORD_HERE`
+
+**Issue**: API keys in appsettings.Development.json
+**Solution**: OK for local dev only. Production MUST use Managed Identity (no `ApiKey` property)
+
+**Issue**: Connection strings in code
+**Solution**: Always use configuration files, never hardcode. Production: Key Vault
 
 ---
 

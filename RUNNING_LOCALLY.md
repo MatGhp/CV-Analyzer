@@ -1,11 +1,17 @@
 # Running Backend Locally with Azure Resources
 
+**Audience**: Developers setting up local development environment with live Azure resources
+
+**Alternative**: For quick Docker-based setup, see [`QUICKSTART.md`](QUICKSTART.md)
+
+---
+
 ## Prerequisites ✅
 
-- [x] Azure CLI installed and logged in
-- [x] .NET 9 SDK installed
-- [x] Azure resources deployed (`rg-cvanalyzer-dev`)
-- [x] SQL Server firewall configured (your IP: 193.27.220.9)
+- [x] **Azure CLI** installed and logged in (`az login`)
+- [x] **.NET 10 SDK** installed ([download](https://dotnet.microsoft.com/download/dotnet/10.0))
+- [x] **Azure resources** deployed via Terraform (`rg-cvanalyzer-dev`)
+- [x] **SQL Server firewall** configured with your IP address
 
 ## Configuration
 
@@ -67,7 +73,11 @@ Add to `appsettings.Development.json`:
 az cognitiveservices account keys list --name ai-cvanalyzer-dev --resource-group rg-cvanalyzer-dev --query key1 -o tsv
 ```
 
-> **Note**: For production, use Managed Identity (no API key needed). For local dev, API key is simpler.
+> **⚠️ Security Note**: 
+> - **Local Development**: API keys are acceptable for simplicity
+> - **Production/CI/CD**: ALWAYS use Managed Identity (no keys in code)
+> - **Never commit** API keys to Git (pre-commit hook will block)
+> - See [`docs/SECURITY.md`](docs/SECURITY.md) for full guidelines
 
 ### 4. Start the API
 
