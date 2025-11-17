@@ -69,7 +69,7 @@ resource "azurerm_container_app" "frontend" {
         initial_delay            = 3
         interval_seconds         = 5
         timeout                  = 5
-        failure_count_threshold  = 48
+        failure_count_threshold  = 30  # Max allowed by provider (150s max)
         success_count_threshold  = 1
       }
 
@@ -79,7 +79,7 @@ resource "azurerm_container_app" "frontend" {
         initial_delay            = 1
         interval_seconds         = 1
         timeout                  = 3
-        failure_count_threshold  = 240
+        failure_count_threshold  = 30  # Max allowed by provider (30s max)
       }
     }
   }
@@ -148,7 +148,7 @@ resource "azurerm_container_app" "api" {
         initial_delay            = 3
         interval_seconds         = 5
         timeout                  = 5
-        failure_count_threshold  = 48
+        failure_count_threshold  = 30  # Max allowed by provider (150s max)
         success_count_threshold  = 1
       }
 
@@ -158,7 +158,7 @@ resource "azurerm_container_app" "api" {
         initial_delay            = 1
         interval_seconds         = 1
         timeout                  = 3
-        failure_count_threshold  = 240
+        failure_count_threshold  = 30  # Max allowed by provider (30s max)
       }
 
       env {
