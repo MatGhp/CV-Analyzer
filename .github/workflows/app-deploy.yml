@@ -47,14 +47,25 @@ jobs:
 
     - name: Build and Push Images
       run: |
-        # Build and push in parallel
-        docker build -t ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-api:${{ github.sha }} ./backend &
-        docker build -t ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-frontend:${{ github.sha }} ./frontend &
+        # Build and push images with both commit SHA and latest tags
+        # Backend API
+        docker build -t ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-api:${{ github.sha }} \
+                     -t ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-api:latest \
+                     ./backend &
+        
+        # Frontend
+        docker build -t ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-frontend:${{ github.sha }} \
+                     -t ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-frontend:latest \
+                     ./frontend &
+        
         wait
         
-        # Push images
+        # Push both tags for each image
         docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-api:${{ github.sha }} &
+        docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-api:latest &
         docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-frontend:${{ github.sha }} &
+        docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-frontend:latest &
+        
         wait
 
     - name: Update Container Apps
