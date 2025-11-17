@@ -55,6 +55,32 @@ resource "azurerm_container_app" "frontend" {
         name  = "NGINX_PORT"
         value = "80"
       }
+
+      # Health probes - critical for fast provisioning
+      # Without probes, Terraform waits 15-20 minutes for implicit timeout
+      liveness_probe {
+        transport = "TCP"
+        port      = 80
+      }
+
+      readiness_probe {
+        transport              = "TCP"
+        port                   = 80
+        initial_delay_seconds  = 3
+        period_seconds         = 5
+        timeout_seconds        = 5
+        failure_threshold      = 48
+        success_threshold      = 1
+      }
+
+      startup_probe {
+        transport              = "TCP"
+        port                   = 80
+        initial_delay_seconds  = 1
+        period_seconds         = 1
+        timeout_seconds        = 3
+        failure_threshold      = 240
+      }
     }
   }
 
@@ -109,6 +135,31 @@ resource "azurerm_container_app" "api" {
       image  = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
       cpu    = "1.0"
       memory = "2.0Gi"
+
+      # Health probes - matches Azure Portal defaults for fast provisioning
+      liveness_probe {
+        transport = "TCP"
+        port      = 80
+      }
+
+      readiness_probe {
+        transport              = "TCP"
+        port                   = 80
+        initial_delay_seconds  = 3
+        period_seconds         = 5
+        timeout_seconds        = 5
+        failure_threshold      = 48
+        success_threshold      = 1
+      }
+
+      startup_probe {
+        transport              = "TCP"
+        port                   = 80
+        initial_delay_seconds  = 1
+        period_seconds         = 1
+        timeout_seconds        = 3
+        failure_threshold      = 240
+      }
 
       env {
         name  = "ASPNETCORE_ENVIRONMENT"
