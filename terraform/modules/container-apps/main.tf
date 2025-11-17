@@ -56,31 +56,8 @@ resource "azurerm_container_app" "frontend" {
         value = "80"
       }
 
-      # Health probes - critical for fast provisioning
-      # Without probes, Terraform waits 15-20 minutes for implicit timeout
-      liveness_probe {
-        transport = "TCP"
-        port      = 80
-      }
-
-      readiness_probe {
-        transport                = "TCP"
-        port                     = 80
-        initial_delay            = 3
-        interval_seconds         = 5
-        timeout                  = 5
-        failure_count_threshold  = 30  # Max allowed by provider (150s max)
-        success_count_threshold  = 1
-      }
-
-      startup_probe {
-        transport                = "TCP"
-        port                     = 80
-        initial_delay            = 1
-        interval_seconds         = 1
-        timeout                  = 3
-        failure_count_threshold  = 30  # Max allowed by provider (30s max)
-      }
+      # NOTE: Health probes removed for infrastructure deployment with placeholder images
+      # Will be added via CI/CD when deploying real application images that respond on port 80
     }
   }
 
@@ -136,30 +113,8 @@ resource "azurerm_container_app" "api" {
       cpu    = "1.0"
       memory = "2.0Gi"
 
-      # Health probes - matches Azure Portal defaults for fast provisioning
-      liveness_probe {
-        transport = "TCP"
-        port      = 80
-      }
-
-      readiness_probe {
-        transport                = "TCP"
-        port                     = 80
-        initial_delay            = 3
-        interval_seconds         = 5
-        timeout                  = 5
-        failure_count_threshold  = 30  # Max allowed by provider (150s max)
-        success_count_threshold  = 1
-      }
-
-      startup_probe {
-        transport                = "TCP"
-        port                     = 80
-        initial_delay            = 1
-        interval_seconds         = 1
-        timeout                  = 3
-        failure_count_threshold  = 30  # Max allowed by provider (30s max)
-      }
+      # NOTE: Health probes removed for infrastructure deployment with placeholder images
+      # Will be added via CI/CD when deploying real application images that respond on port 80
 
       env {
         name  = "ASPNETCORE_ENVIRONMENT"
