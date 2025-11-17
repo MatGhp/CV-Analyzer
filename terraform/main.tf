@@ -108,19 +108,19 @@ module "container_apps" {
   acr_login_server = module.acr.login_server
 
   # Configuration
-  sql_connection_string              = module.sql_database.connection_string
-  ai_foundry_endpoint                = module.ai_foundry.endpoint
-  model_deployment_name              = var.model_deployment_name
-  storage_account_name               = module.storage.name
-  storage_blob_endpoint              = module.storage.primary_blob_endpoint
-  storage_queue_endpoint             = module.storage.primary_queue_endpoint
-  queue_config                       = module.storage.queue_names
-  document_intelligence_endpoint     = module.document_intelligence.endpoint
-  app_insights_connection_string     = azurerm_application_insights.main.connection_string
-  app_insights_instrumentation_key   = azurerm_application_insights.main.instrumentation_key
-  log_analytics_workspace_id         = azurerm_log_analytics_workspace.main.id
-  min_replicas                       = var.min_replicas
-  max_replicas                       = var.max_replicas
+  sql_connection_string            = module.sql_database.connection_string
+  ai_foundry_endpoint              = module.ai_foundry.endpoint
+  model_deployment_name            = var.model_deployment_name
+  storage_account_name             = module.storage.name
+  storage_blob_endpoint            = module.storage.primary_blob_endpoint
+  storage_queue_endpoint           = module.storage.primary_queue_endpoint
+  queue_config                     = module.storage.queue_names
+  document_intelligence_endpoint   = module.document_intelligence.endpoint
+  app_insights_connection_string   = azurerm_application_insights.main.connection_string
+  app_insights_instrumentation_key = azurerm_application_insights.main.instrumentation_key
+  log_analytics_workspace_id       = azurerm_log_analytics_workspace.main.id
+  min_replicas                     = var.min_replicas
+  max_replicas                     = var.max_replicas
 
   tags = local.common_tags
 }
