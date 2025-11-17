@@ -30,13 +30,24 @@ resource "azurerm_container_app" "frontend" {
     }
   }
 
+  # Lifecycle: Ignore template changes after initial creation
+  # CI/CD pipeline (app-deploy.yml) manages container updates
+  lifecycle {
+    ignore_changes = [
+      template[0].container[0].image,  # Don't revert image updates from CI/CD
+      template[0].revision_suffix      # Preserve revision history
+    ]
+  }
+
   template {
     min_replicas = var.min_replicas
     max_replicas = var.max_replicas
 
     container {
       name   = "frontend"
-      image  = var.frontend_image
+      # Use Microsoft's hello-world as placeholder
+      # Real image deployed by GitHub Actions app-deploy.yml
+      image  = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
       cpu    = "0.5"
       memory = "1.0Gi"
 
@@ -79,13 +90,23 @@ resource "azurerm_container_app" "api" {
     }
   }
 
+  # Lifecycle: Ignore template changes after initial creation
+  # CI/CD pipeline (app-deploy.yml) manages container updates
+  lifecycle {
+    ignore_changes = [
+      template[0].container[0].image,
+      template[0].revision_suffix
+    ]
+  }
+
   template {
     min_replicas = var.min_replicas
     max_replicas = var.max_replicas
 
     container {
       name   = "api"
-      image  = var.api_image
+      # Placeholder image - real app deployed by GitHub Actions
+      image  = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
       cpu    = "1.0"
       memory = "2.0Gi"
 

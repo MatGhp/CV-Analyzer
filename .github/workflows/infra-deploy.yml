@@ -47,7 +47,7 @@ jobs:
         terraform_version: "1.7.4"
 
     - name: Terraform Format
-      run: terraform fmt -check
+      run: terraform fmt -recursive
 
     - name: Terraform Init
       run: terraform init -backend-config="backend-${{ github.event.inputs.environment || 'dev' }}.hcl" -reconfigure
@@ -56,20 +56,15 @@ jobs:
       run: terraform validate -no-color
 
     - name: Terraform Plan
-      id: plan
-      run: terraform plan -var-file="environments/${{ github.event.inputs.environment || 'dev' }}.tfvars" -out=tfplan
-      continue-on-error: true
-    
-    - name: Handle State Lock (if locked)
-      if: steps.plan.outcome == 'failure'
-      run: |
-        # Extract lock ID from error and force unlock if state is locked
-        terraform plan -var-file="environments/${{ github.event.inputs.environment || 'dev' }}.tfvars" 2>&1 | grep -oP 'ID:\s+\K[a-f0-9-]+' | head -1 | xargs -I {} terraform force-unlock -force {}
-        
-    - name: Terraform Plan (Retry after unlock)
-      if: steps.plan.outcome == 'failure'
       run: terraform plan -var-file="environments/${{ github.event.inputs.environment || 'dev' }}.tfvars" -out=tfplan
       
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
       run: terraform apply -auto-approve tfplan
+      
+    - name: Show Infrastructure Outputs
+      if: success()
+      run: |
+        echo "## Infrastructure Deployed Successfully" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        terraform output -json | jq -r 'to_entries[] | "**\(.key)**: \(.value.value)"' >> $GITHUB_STEP_SUMMARY
