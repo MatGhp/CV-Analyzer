@@ -64,22 +64,22 @@ resource "azurerm_container_app" "frontend" {
       }
 
       readiness_probe {
-        transport              = "TCP"
-        port                   = 80
-        initial_delay_seconds  = 3
-        period_seconds         = 5
-        timeout_seconds        = 5
-        failure_threshold      = 48
-        success_threshold      = 1
+        transport                = "TCP"
+        port                     = 80
+        initial_delay            = 3
+        interval_seconds         = 5
+        timeout                  = 5
+        failure_count_threshold  = 48
+        success_count_threshold  = 1
       }
 
       startup_probe {
-        transport              = "TCP"
-        port                   = 80
-        initial_delay_seconds  = 1
-        period_seconds         = 1
-        timeout_seconds        = 3
-        failure_threshold      = 240
+        transport                = "TCP"
+        port                     = 80
+        initial_delay            = 1
+        interval_seconds         = 1
+        timeout                  = 3
+        failure_count_threshold  = 240
       }
     }
   }
@@ -143,22 +143,22 @@ resource "azurerm_container_app" "api" {
       }
 
       readiness_probe {
-        transport              = "TCP"
-        port                   = 80
-        initial_delay_seconds  = 3
-        period_seconds         = 5
-        timeout_seconds        = 5
-        failure_threshold      = 48
-        success_threshold      = 1
+        transport                = "TCP"
+        port                     = 80
+        initial_delay            = 3
+        interval_seconds         = 5
+        timeout                  = 5
+        failure_count_threshold  = 48
+        success_count_threshold  = 1
       }
 
       startup_probe {
-        transport              = "TCP"
-        port                   = 80
-        initial_delay_seconds  = 1
-        period_seconds         = 1
-        timeout_seconds        = 3
-        failure_threshold      = 240
+        transport                = "TCP"
+        port                     = 80
+        initial_delay            = 1
+        interval_seconds         = 1
+        timeout                  = 3
+        failure_count_threshold  = 240
       }
 
       env {
