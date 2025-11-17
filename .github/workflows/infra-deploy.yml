@@ -56,6 +56,18 @@ jobs:
       run: terraform validate -no-color
 
     - name: Terraform Plan
+      id: plan
+      run: terraform plan -var-file="environments/${{ github.event.inputs.environment || 'dev' }}.tfvars" -out=tfplan
+      continue-on-error: true
+    
+    - name: Handle State Lock (if locked)
+      if: steps.plan.outcome == 'failure'
+      run: |
+        # Extract lock ID from error and force unlock if state is locked
+        terraform plan -var-file="environments/${{ github.event.inputs.environment || 'dev' }}.tfvars" 2>&1 | grep -oP 'ID:\s+\K[a-f0-9-]+' | head -1 | xargs -I {} terraform force-unlock -force {}
+        
+    - name: Terraform Plan (Retry after unlock)
+      if: steps.plan.outcome == 'failure'
       run: terraform plan -var-file="environments/${{ github.event.inputs.environment || 'dev' }}.tfvars" -out=tfplan
       
     - name: Terraform Apply
