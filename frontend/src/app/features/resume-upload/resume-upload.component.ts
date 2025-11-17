@@ -45,8 +45,11 @@ export class ResumeUploadComponent {
     this.uploadState.set('uploading');
 
     try {
+      // TODO: Replace with actual user ID from authentication
+      const userId = this.getUserId();
+      
       const response = await firstValueFrom(
-        this.resumeService.uploadResume({ file })
+        this.resumeService.uploadResume({ file, userId })
       );
       
       if (!response) {
@@ -61,5 +64,23 @@ export class ResumeUploadComponent {
       this.uploadState.set('error');
       this.errorMessage.set(error?.error?.message || ERROR_MESSAGES.ANALYSIS_FAILED);
     }
+  }
+
+  /**
+   * Get or generate user ID for resume upload
+   * TODO: Replace with actual authentication once implemented
+   * For now, generates a session-based ID stored in localStorage
+   */
+  private getUserId(): string {
+    const storageKey = 'cv-analyzer-session-id';
+    let userId = localStorage.getItem(storageKey);
+    
+    if (!userId) {
+      // Generate a simple session ID (in production, use proper auth)
+      userId = `guest-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      localStorage.setItem(storageKey, userId);
+    }
+    
+    return userId;
   }
 }
