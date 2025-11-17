@@ -102,6 +102,23 @@ variable "document_intelligence_endpoint" {
   type        = string
 }
 
+variable "app_insights_connection_string" {
+  description = "Application Insights connection string"
+  type        = string
+  sensitive   = true
+}
+
+variable "app_insights_instrumentation_key" {
+  description = "Application Insights instrumentation key"
+  type        = string
+  sensitive   = true
+}
+
+variable "log_analytics_workspace_id" {
+  description = "Log Analytics Workspace ID for Container Apps Environment"
+  type        = string
+}
+
 variable "tags" {
   description = "Resource tags"
   type        = map(string)

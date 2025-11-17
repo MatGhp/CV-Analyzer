@@ -28,5 +28,6 @@ COPY --from=publish /app/publish .
 
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 
 ENTRYPOINT ["dotnet", "CVAnalyzer.API.dll"]

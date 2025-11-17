@@ -2,6 +2,7 @@ using CVAnalyzer.API.Middleware;
 using CVAnalyzer.Application;
 using CVAnalyzer.Infrastructure;
 using Serilog;
+using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,10 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Console()
     .WriteTo.File("logs/cvanalyzer-.log", rollingInterval: RollingInterval.Day)
+    .WriteTo.ApplicationInsights(
+        builder.Configuration["ApplicationInsights:InstrumentationKey"] ?? 
+        builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"],
+        TelemetryConverter.Traces)
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -34,7 +39,13 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddHealthChecks();
+// Application Insights telemetry
+builder.Services.AddApplicationInsightsTelemetry();
+
+// Health checks with specific checks
+builder.Services.AddHealthChecks()
+    .AddCheck<CVAnalyzer.Infrastructure.HealthChecks.BlobStorageHealthCheck>("blob_storage")
+    .AddCheck<CVAnalyzer.Infrastructure.HealthChecks.DocumentIntelligenceHealthCheck>("document_intelligence");
 
 var app = builder.Build();
 

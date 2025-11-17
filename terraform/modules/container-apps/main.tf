@@ -3,9 +3,10 @@
 
 # Container Apps Environment
 resource "azurerm_container_app_environment" "env" {
-  name                = var.environment_name
-  resource_group_name = var.resource_group_name
-  location            = var.location
+  name                       = var.environment_name
+  resource_group_name        = var.resource_group_name
+  location                   = var.location
+  log_analytics_workspace_id = var.log_analytics_workspace_id
 
   tags = var.tags
 }
@@ -166,6 +167,33 @@ resource "azurerm_container_app" "api" {
       env {
         name  = "DocumentIntelligence__UseManagedIdentity"
         value = "true"
+      }
+
+      env {
+        name  = "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"
+        value = "false"
+      }
+
+      env {
+        name  = "APPLICATIONINSIGHTS_CONNECTION_STRING"
+        value = var.app_insights_connection_string
+      }
+
+      env {
+        name  = "ApplicationInsights__InstrumentationKey"
+        value = var.app_insights_instrumentation_key
+      }
+
+      liveness_probe {
+        transport = "HTTP"
+        port      = 8080
+        path      = "/health"
+      }
+
+      readiness_probe {
+        transport = "HTTP"
+        port      = 8080
+        path      = "/health"
       }
     }
   }
