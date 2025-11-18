@@ -66,7 +66,12 @@ jobs:
 
     - name: Terraform Plan
       id: plan
-      run: terraform plan -var-file="environments/${{ github.event.inputs.environment || 'dev' }}.tfvars" -no-color
+      run: |
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          terraform plan -var-file="environments/${{ github.event.inputs.environment || 'dev' }}.tfvars" -no-color
+        else
+          terraform plan -var-file="environments/${{ github.event.inputs.environment || 'dev' }}.tfvars" -out=tfplan
+        fi
       continue-on-error: true
       
     - name: Comment PR with Plan
