@@ -34,8 +34,7 @@ resource "azurerm_container_app" "frontend" {
   # CI/CD pipeline (app-deploy.yml) manages container updates
   lifecycle {
     ignore_changes = [
-      template[0].container[0].image, # Don't revert image updates from CI/CD
-      template[0].revision_suffix     # Preserve revision history
+      template # Ignore all template changes (image, memory, env vars, etc.)
     ]
   }
 
@@ -94,8 +93,7 @@ resource "azurerm_container_app" "api" {
   # CI/CD pipeline (app-deploy.yml) manages container updates
   lifecycle {
     ignore_changes = [
-      template[0].container[0].image,
-      template[0].revision_suffix
+      template # Ignore all template changes (image, memory, env vars, etc.)
     ]
   }
 
