@@ -36,23 +36,7 @@ variable "sku_name" {
   }
 }
 
-variable "sql_connection_string" {
-  description = "SQL Server connection string to store as secret"
-  type        = string
-  sensitive   = true
-}
 
-variable "app_insights_connection_string" {
-  description = "Application Insights connection string to store as secret"
-  type        = string
-  sensitive   = true
-}
-
-variable "app_insights_instrumentation_key" {
-  description = "Application Insights instrumentation key to store as secret"
-  type        = string
-  sensitive   = true
-}
 
 variable "api_managed_identity_principal_id" {
   description = "Principal ID of API Container App managed identity"

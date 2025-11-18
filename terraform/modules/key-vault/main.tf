@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 4.15.0"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.12.1"
+    }
   }
 }
 
@@ -39,43 +43,8 @@ resource "azurerm_key_vault" "main" {
 # Current Azure client configuration
 data "azurerm_client_config" "current" {}
 
-# Secret: SQL Connection String
-resource "azurerm_key_vault_secret" "sql_connection_string" {
-  name         = "DatabaseConnectionString"
-  value        = var.sql_connection_string
-  key_vault_id = azurerm_key_vault.main.id
-
-  # Wait for RBAC role assignment to propagate (assigned in root main.tf)
-  depends_on = [azurerm_key_vault.main]
-
-  tags = var.tags
-}
-
-# Secret: Application Insights Connection String
-resource "azurerm_key_vault_secret" "app_insights_connection_string" {
-  name         = "ApplicationInsightsConnectionString"
-  value        = var.app_insights_connection_string
-  key_vault_id = azurerm_key_vault.main.id
-
-  # Wait for RBAC role assignment to propagate (assigned in root main.tf)
-  depends_on = [azurerm_key_vault.main]
-
-  tags = var.tags
-}
-
-# Secret: Application Insights Instrumentation Key
-resource "azurerm_key_vault_secret" "app_insights_instrumentation_key" {
-  name         = "ApplicationInsightsInstrumentationKey"
-  value        = var.app_insights_instrumentation_key
-  key_vault_id = azurerm_key_vault.main.id
-
-  # Wait for RBAC role assignment to propagate (assigned in root main.tf)
-  depends_on = [azurerm_key_vault.main]
-
-  tags = var.tags
-}
-
-# Note: Access control is managed via RBAC (role assignments in main.tf)
+# Note: Secrets are created in root main.tf after RBAC propagation delay
+# This avoids circular dependencies between Key Vault module and RBAC assignments
 # Terraform Service Principal needs "Key Vault Administrator" or "Key Vault Secrets Officer" role
 # Container Apps managed identities need "Key Vault Secrets User" role
 # These are assigned in the root main.tf file
