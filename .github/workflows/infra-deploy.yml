@@ -109,4 +109,16 @@ jobs:
       run: |
         echo "## Infrastructure Deployed Successfully" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        terraform output -json | jq -r 'to_entries[] | "**\(.key)**: \(.value.value)"' >> $GITHUB_STEP_SUMMARY
+        
+        # Capture terraform output, suppress warnings/errors to stderr
+        if terraform output -json 2>/dev/null > outputs.json && [ -s outputs.json ]; then
+          # Validate JSON before parsing
+          if jq empty outputs.json 2>/dev/null; then
+            jq -r 'to_entries[] | "**\(.key)**: \(.value.value)"' outputs.json >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Output JSON validation failed" >> $GITHUB_STEP_SUMMARY
+            cat outputs.json >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "⚠️ No outputs available" >> $GITHUB_STEP_SUMMARY
+        fi
