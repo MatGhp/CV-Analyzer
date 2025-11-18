@@ -124,6 +124,11 @@ resource "azurerm_container_app" "api" {
       }
 
       env {
+        name  = "KeyVault__Uri"
+        value = var.key_vault_uri
+      }
+
+      env {
         name  = "Agent__Endpoint"
         value = var.ai_foundry_endpoint
       }

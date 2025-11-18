@@ -26,6 +26,11 @@ variable "environment" {
   default     = "Production"
 }
 
+variable "key_vault_uri" {
+  description = "Key Vault URI for secret references"
+  type        = string
+}
+
 variable "min_replicas" {
   description = "Minimum number of replicas (0 for scale-to-zero)"
   type        = number

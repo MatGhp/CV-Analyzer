@@ -36,6 +36,30 @@ resource "azurerm_application_insights" "main" {
   tags = local.common_tags
 }
 
+# Current Azure client configuration (for Terraform service principal)
+data "azurerm_client_config" "current" {}
+
+# Key Vault Module (created without Container Apps access policies initially)
+module "key_vault" {
+  source              = "./modules/key-vault"
+  name                = "kv-cvanalyzer-${var.environment}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  environment         = var.environment
+  sku_name            = var.environment == "prod" ? "premium" : "standard"
+
+  # Secrets to store
+  sql_connection_string            = module.sql_database.connection_string
+  app_insights_connection_string   = azurerm_application_insights.main.connection_string
+  app_insights_instrumentation_key = azurerm_application_insights.main.instrumentation_key
+
+  # Managed identity access policies will be added via RBAC after Container Apps created
+  api_managed_identity_principal_id      = null
+  frontend_managed_identity_principal_id = null
+
+  tags = local.common_tags
+}
+
 # SQL Database Module
 module "sql_database" {
   source              = "./modules/sql-database"
@@ -109,7 +133,8 @@ module "container_apps" {
   acr_login_server = module.acr.login_server
 
   # Configuration
-  sql_connection_string            = module.sql_database.connection_string
+  key_vault_uri                    = module.key_vault.uri
+  sql_connection_string            = module.sql_database.connection_string # Fallback only
   ai_foundry_endpoint              = module.ai_foundry.endpoint
   model_deployment_name            = var.model_deployment_name
   storage_account_name             = module.storage.name
@@ -117,8 +142,8 @@ module "container_apps" {
   storage_queue_endpoint           = module.storage.primary_queue_endpoint
   queue_config                     = module.storage.queue_names
   document_intelligence_endpoint   = module.document_intelligence.endpoint
-  app_insights_connection_string   = azurerm_application_insights.main.connection_string
-  app_insights_instrumentation_key = azurerm_application_insights.main.instrumentation_key
+  app_insights_connection_string   = azurerm_application_insights.main.connection_string   # Fallback only
+  app_insights_instrumentation_key = azurerm_application_insights.main.instrumentation_key # Fallback only
   log_analytics_workspace_id       = azurerm_log_analytics_workspace.main.id
   min_replicas                     = var.min_replicas
   max_replicas                     = var.max_replicas
@@ -126,14 +151,23 @@ module "container_apps" {
   tags = local.common_tags
 }
 
+# Role assignment: Terraform Service Principal needs to manage Key Vault secrets
+resource "azurerm_role_assignment" "terraform_keyvault" {
+  scope                = module.key_vault.id
+  role_definition_name = "Key Vault Secrets Officer"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
 # Role assignments for Container Apps
 locals {
   frontend_role_assignments = {
-    acr_pull = { scope = module.acr.id, role = "AcrPull" }
+    acr_pull  = { scope = module.acr.id, role = "AcrPull" }
+    key_vault = { scope = module.key_vault.id, role = "Key Vault Secrets User" }
   }
 
   api_role_assignments = {
     acr_pull              = { scope = module.acr.id, role = "AcrPull" }
+    key_vault             = { scope = module.key_vault.id, role = "Key Vault Secrets User" }
     cognitive_services    = { scope = module.ai_foundry.id, role = "Cognitive Services User" }
     storage_blob          = { scope = module.storage.id, role = "Storage Blob Data Contributor" }
     storage_queue         = { scope = module.storage.id, role = "Storage Queue Data Contributor" }

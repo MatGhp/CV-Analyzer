@@ -6,16 +6,28 @@ using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 
 var builder = WebApplication.CreateBuilder(args);
 
-Log.Logger = new LoggerConfiguration()
+// Configure Serilog with conditional Application Insights
+var loggerConfig = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
     .WriteTo.Console()
-    .WriteTo.File("logs/cvanalyzer-.log", rollingInterval: RollingInterval.Day)
-    .WriteTo.ApplicationInsights(
-        builder.Configuration["ApplicationInsights:InstrumentationKey"] ?? 
-        builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"],
-        TelemetryConverter.Traces)
-    .CreateLogger();
+    .WriteTo.File("logs/cvanalyzer-.log", rollingInterval: RollingInterval.Day);
+
+// Only add Application Insights if connection string is valid
+var appInsightsConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+if (!string.IsNullOrWhiteSpace(appInsightsConnectionString))
+{
+    try
+    {
+        loggerConfig.WriteTo.ApplicationInsights(appInsightsConnectionString, TelemetryConverter.Traces);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Warning: Failed to configure Application Insights: {ex.Message}");
+    }
+}
+
+Log.Logger = loggerConfig.CreateLogger();
 
 builder.Host.UseSerilog();
 
@@ -31,12 +43,26 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    if (builder.Environment.IsDevelopment())
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
+        options.AddPolicy("AllowAll", policy =>
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        });
+    }
+    else
+    {
+        var frontendUrl = builder.Configuration["Frontend:Url"] ?? "https://ca-cvanalyzer-frontend.proudwater-2b5f3fe1.swedencentral.azurecontainerapps.io";
+        options.AddPolicy("AllowAll", policy =>
+        {
+            policy.WithOrigins(frontendUrl)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        });
+    }
 });
 
 // Application Insights telemetry
@@ -45,7 +71,8 @@ builder.Services.AddApplicationInsightsTelemetry();
 // Health checks with specific checks
 builder.Services.AddHealthChecks()
     .AddCheck<CVAnalyzer.Infrastructure.HealthChecks.BlobStorageHealthCheck>("blob_storage")
-    .AddCheck<CVAnalyzer.Infrastructure.HealthChecks.DocumentIntelligenceHealthCheck>("document_intelligence");
+    .AddCheck<CVAnalyzer.Infrastructure.HealthChecks.DocumentIntelligenceHealthCheck>("document_intelligence")
+    .AddCheck<CVAnalyzer.Infrastructure.HealthChecks.KeyVaultHealthCheck>("key_vault");
 
 var app = builder.Build();
 

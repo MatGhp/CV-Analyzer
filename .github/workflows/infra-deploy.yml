@@ -2,7 +2,12 @@ name: Infrastructure Deployment
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ]  # Only apply infrastructure changes from main
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/infra-deploy.yml'
+  pull_request:
+    branches: [ main ]  # Run Terraform plan on PRs
     paths:
       - 'terraform/**'
       - '.github/workflows/infra-deploy.yml'
@@ -17,6 +22,10 @@ on:
           - dev
           - test
           - prod
+
+permissions:
+  contents: read
+  pull-requests: write  # Allow commenting on PRs
 
 concurrency:
   group: terraform-${{ github.event.inputs.environment || 'dev' }}
@@ -56,14 +65,42 @@ jobs:
       run: terraform validate -no-color
 
     - name: Terraform Plan
-      run: terraform plan -var-file="environments/${{ github.event.inputs.environment || 'dev' }}.tfvars" -out=tfplan
+      id: plan
+      run: terraform plan -var-file="environments/${{ github.event.inputs.environment || 'dev' }}.tfvars" -no-color
+      continue-on-error: true
+      
+    - name: Comment PR with Plan
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      env:
+        PLAN_OUTPUT: ${{ steps.plan.outputs.stdout }}
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const output = `#### Terraform Plan 📖
+          <details><summary>Show Plan</summary>
+          
+          \`\`\`terraform
+          ${process.env.PLAN_OUTPUT}
+          \`\`\`
+          
+          </details>
+          
+          *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`terraform\`*`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })
       
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
       run: terraform apply -auto-approve tfplan
       
     - name: Show Infrastructure Outputs
-      if: success()
+      if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && success()
       run: |
         echo "## Infrastructure Deployed Successfully" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
