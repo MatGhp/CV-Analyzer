@@ -49,6 +49,9 @@ jobs:
       run: |
         az acr login --name ${{ env.ACR_NAME }}
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Build and Push Images
       run: |
         # Build and push images with both commit SHA and latest tags
@@ -64,13 +67,13 @@ jobs:
         
         wait
         
-        # Push both tags for each image
-        docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-api:${{ github.sha }} &
-        docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-api:latest &
-        docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-frontend:${{ github.sha }} &
-        docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-frontend:latest &
-        
-        wait
+        # Push both tags for each image with error handling
+        echo "Pushing images to ACR..."
+        docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-api:${{ github.sha }} || { echo "Failed to push API SHA tag"; exit 1; }
+        docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-api:latest || { echo "Failed to push API latest tag"; exit 1; }
+        docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-frontend:${{ github.sha }} || { echo "Failed to push Frontend SHA tag"; exit 1; }
+        docker push ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-frontend:latest || { echo "Failed to push Frontend latest tag"; exit 1; }
+        echo "✓ All images pushed successfully"
 
     - name: Update Container Apps
       run: |
@@ -89,41 +92,58 @@ jobs:
 
     - name: Health Check
       run: |
-        echo "Waiting for deployment to stabilize..."
-        sleep 30
+        echo "Waiting for Container Apps revision provisioning (can take up to 20 minutes)..."
         
         API_URL=$(az containerapp show --name ca-cvanalyzer-api --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
         FRONTEND_URL=$(az containerapp show --name ca-cvanalyzer-frontend --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
         
-        echo "Checking API: https://$API_URL/api/health"
-        echo "Checking Frontend: https://$FRONTEND_URL/health"
+        # Wait for revisions to reach Running state (up to 20 minutes)
+        MAX_ATTEMPTS=40  # 40 × 30s = 20 minutes
         
-        # Simple health check with 3 retries
-        for i in 1 2 3; do
-          if curl -sf "https://$API_URL/api/health" > /dev/null; then
-            API_OK="OK"
-          else
-            API_OK="FAIL"
+        for i in $(seq 1 $MAX_ATTEMPTS); do
+          API_REVISION=$(az containerapp show --name ca-cvanalyzer-api --resource-group ${{ env.RESOURCE_GROUP }} --query properties.latestRevisionName -o tsv)
+          FRONTEND_REVISION=$(az containerapp show --name ca-cvanalyzer-frontend --resource-group ${{ env.RESOURCE_GROUP }} --query properties.latestRevisionName -o tsv)
+          
+          API_STATUS=$(az containerapp revision show --name ca-cvanalyzer-api --resource-group ${{ env.RESOURCE_GROUP }} --revision "$API_REVISION" --query properties.runningState -o tsv 2>/dev/null || echo "Unknown")
+          FRONTEND_STATUS=$(az containerapp revision show --name ca-cvanalyzer-frontend --resource-group ${{ env.RESOURCE_GROUP }} --revision "$FRONTEND_REVISION" --query properties.runningState -o tsv 2>/dev/null || echo "Unknown")
+          
+          echo "[$i/$MAX_ATTEMPTS] API: $API_STATUS | Frontend: $FRONTEND_STATUS"
+          
+          if [ "$API_STATUS" == "Running" ] && [ "$FRONTEND_STATUS" == "Running" ]; then
+            echo "✓ Both revisions are running, checking health endpoints..."
+            sleep 10  # Brief wait for app startup
+            
+            # Health endpoint checks with 3 retries
+            for j in 1 2 3; do
+              API_HEALTH=$(curl -sf "https://$API_URL/api/health" && echo "OK" || echo "FAIL")
+              FRONTEND_HEALTH=$(curl -sf "https://$FRONTEND_URL/health" && echo "OK" || echo "FAIL")
+              
+              if [ "$API_HEALTH" == "OK" ] && [ "$FRONTEND_HEALTH" == "OK" ]; then
+                echo "[PASS] All health checks passed"
+                echo "API_URL=$API_URL" >> $GITHUB_ENV
+                echo "FRONTEND_URL=$FRONTEND_URL" >> $GITHUB_ENV
+                exit 0
+              fi
+              
+              echo "Health check retry $j/3: API=$API_HEALTH, Frontend=$FRONTEND_HEALTH"
+              sleep 10
+            done
+            
+            echo "[FAIL] Revisions running but health checks failed"
+            exit 1
           fi
           
-          if curl -sf "https://$FRONTEND_URL/health" > /dev/null; then
-            FRONTEND_OK="OK"
-          else
-            FRONTEND_OK="FAIL"
+          if [ "$API_STATUS" == "Failed" ] || [ "$FRONTEND_STATUS" == "Failed" ]; then
+            echo "[FAIL] Revision activation failed"
+            echo "API Status: $API_STATUS"
+            echo "Frontend Status: $FRONTEND_STATUS"
+            exit 1
           fi
           
-          if [ "$API_OK" == "OK" ] && [ "$FRONTEND_OK" == "OK" ]; then
-            echo "[PASS] All health checks passed"
-            echo "API_URL=$API_URL" >> $GITHUB_ENV
-            echo "FRONTEND_URL=$FRONTEND_URL" >> $GITHUB_ENV
-            exit 0
-          fi
-          
-          echo "Retry $i: API=$API_OK, Frontend=$FRONTEND_OK"
-          sleep 10
+          sleep 30
         done
         
-        echo "[FAIL] Health checks failed after 3 attempts"
+        echo "[FAIL] Timeout waiting for revisions to reach Running state"
         exit 1
 
     - name: Deployment Summary

@@ -1,0 +1,45 @@
+name: Debug Container Logs
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to debug'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - test
+          - prod
+
+env:
+  RESOURCE_GROUP: rg-cvanalyzer-${{ github.event.inputs.environment }}
+
+jobs:
+  get-logs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Get API Container Logs
+        run: |
+          echo "=== API Container App Status ==="
+          az containerapp show --name ca-cvanalyzer-api --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query "{name:name, status:properties.provisioningState, runningStatus:properties.runningStatus, latestRevision:properties.latestRevisionName}" -o json
+          
+          echo ""
+          echo "=== API Revision Details ==="
+          az containerapp revision list --name ca-cvanalyzer-api --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query "[?properties.active==\`true\`] | [0].{revision:name, status:properties.provisioningState, health:properties.healthState, replicas:properties.replicas, runningState:properties.runningState}" -o json
+          
+          echo ""
+          echo "=== API Container Logs (last 100 lines) ==="
+          az containerapp logs show --name ca-cvanalyzer-api --resource-group ${{ env.RESOURCE_GROUP }} --tail 100 --follow false || echo "No logs available"
+          
+          echo ""
+          echo "=== Frontend Container Logs (last 100 lines) ==="
+          az containerapp logs show --name ca-cvanalyzer-frontend --resource-group ${{ env.RESOURCE_GROUP }} --tail 100 --follow false || echo "No logs available"
