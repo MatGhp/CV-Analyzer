@@ -6,6 +6,36 @@
 
 ---
 
+## 🔒 Branch Protection - Main Branch Policy
+
+**CRITICAL RULE**: Direct pushes to `main` branch are **BLOCKED** by branch protection rules.
+
+### Required Workflow:
+1. ✅ **Create feature branch**: `git checkout -b feature/your-feature-name`
+2. ✅ **Make changes and commit**: Follow conventional commits format
+3. ✅ **Push to feature branch**: `git push origin feature/your-feature-name`
+4. ✅ **Create Pull Request**: Via GitHub UI or `gh pr create`
+5. ✅ **Wait for checks**: All CI/CD workflows must pass
+6. ✅ **Get approval**: PR review required (if configured)
+7. ✅ **Merge via PR**: Only way to update main branch
+
+### Branch Naming Convention:
+- `feature/*` - New features (e.g., `feature/user-authentication`)
+- `bugfix/*` - Bug fixes (e.g., `bugfix/null-reference-error`)
+- `hotfix/*` - Critical production fixes (e.g., `hotfix/security-patch`)
+- `chore/*` - Maintenance tasks (e.g., `chore/update-dependencies`)
+- `docs/*` - Documentation updates (e.g., `docs/api-guide`)
+
+### Enforcement:
+- **NEVER** attempt `git push origin main` - will fail with branch protection error
+- **ALWAYS** create a feature branch first
+- **NEVER** bypass this rule, even if requested
+- **DO NOT** suggest direct pushes to main in commit instructions
+
+**Purpose**: Ensure all changes go through CI/CD validation and code review before reaching production.
+
+---
+
 ## 🚨 Commit Behavior - Terraform Validation Policy
 
 **CRITICAL RULE**: Before preparing or suggesting ANY commit that includes Terraform changes, you MUST verify that all Terraform validation steps were executed successfully:
