@@ -36,6 +36,9 @@ resource "azurerm_application_insights" "main" {
   tags = local.common_tags
 }
 
+# Current Azure client configuration (for Terraform service principal)
+data "azurerm_client_config" "current" {}
+
 # Key Vault Module (created without Container Apps access policies initially)
 module "key_vault" {
   source              = "./modules/key-vault"
@@ -147,9 +150,6 @@ module "container_apps" {
 
   tags = local.common_tags
 }
-
-# Current Azure client configuration (for Terraform service principal)
-data "azurerm_client_config" "current" {}
 
 # Role assignment: Terraform Service Principal needs to manage Key Vault secrets
 resource "azurerm_role_assignment" "terraform_keyvault" {

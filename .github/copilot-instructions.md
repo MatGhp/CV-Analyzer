@@ -11,10 +11,19 @@
 **CRITICAL RULE**: Before preparing or suggesting ANY commit that includes Terraform changes, you MUST verify that all Terraform validation steps were executed successfully:
 
 ### Required Validation Steps (in order):
-1. ✅ `terraform init -backend=false` — Initialize modules and providers
+1. ✅ `terraform init -backend=false` — Initialize modules and providers (NEVER use remote backend locally)
 2. ✅ `terraform validate` — Verify configuration syntax
 3. ✅ `terraform fmt -check` — Check formatting (run `terraform fmt -recursive` if fails)
-4. ✅ `terraform plan` — Validate execution plan with test credentials
+4. ✅ `terraform plan` — Validate execution plan with local test variables
+
+### Local Testing Rules:
+- **NEVER access real Azure backend** during local validation
+- **ALWAYS use** `terraform init -backend=false`
+- **NEVER block work** due to missing Azure backend credentials
+- For `terraform plan`:
+  - Use inline test variables: `terraform plan -var="sql_admin_password=TestPass123!"`
+  - OR load from `testing.auto.tfvars` if it exists
+  - Use `-var-file="environments/dev.tfvars"` for environment-specific testing
 
 ### Enforcement Rules:
 - **BLOCK COMMIT** if any validation step fails

@@ -45,6 +45,9 @@ resource "azurerm_key_vault_secret" "sql_connection_string" {
   value        = var.sql_connection_string
   key_vault_id = azurerm_key_vault.main.id
 
+  # Wait for RBAC role assignment to propagate (assigned in root main.tf)
+  depends_on = [azurerm_key_vault.main]
+
   tags = var.tags
 }
 
@@ -54,6 +57,9 @@ resource "azurerm_key_vault_secret" "app_insights_connection_string" {
   value        = var.app_insights_connection_string
   key_vault_id = azurerm_key_vault.main.id
 
+  # Wait for RBAC role assignment to propagate (assigned in root main.tf)
+  depends_on = [azurerm_key_vault.main]
+
   tags = var.tags
 }
 
@@ -62,6 +68,9 @@ resource "azurerm_key_vault_secret" "app_insights_instrumentation_key" {
   name         = "ApplicationInsightsInstrumentationKey"
   value        = var.app_insights_instrumentation_key
   key_vault_id = azurerm_key_vault.main.id
+
+  # Wait for RBAC role assignment to propagate (assigned in root main.tf)
+  depends_on = [azurerm_key_vault.main]
 
   tags = var.tags
 }

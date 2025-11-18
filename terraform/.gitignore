@@ -1,4 +1,4 @@
 
 # Terraform local validation (do not commit)
-terraform/backend-validation.tf
+backend-validation.tf
 .terraform-validation/
