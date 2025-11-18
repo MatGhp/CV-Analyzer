@@ -51,12 +51,14 @@ jobs:
           echo "Importing frontend Container App..."
           terraform import \
             -var-file="environments/dev.tfvars" \
+            -var="sql_admin_password=${{ secrets.SQL_ADMIN_PASSWORD }}" \
             module.container_apps.azurerm_container_app.frontend \
             /subscriptions/${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}/resourceGroups/rg-cvanalyzer-dev/providers/Microsoft.App/containerApps/ca-cvanalyzer-frontend || true
           
           echo "Importing API Container App..."
           terraform import \
             -var-file="environments/dev.tfvars" \
+            -var="sql_admin_password=${{ secrets.SQL_ADMIN_PASSWORD }}" \
             module.container_apps.azurerm_container_app.api \
             /subscriptions/${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}/resourceGroups/rg-cvanalyzer-dev/providers/Microsoft.App/containerApps/ca-cvanalyzer-api || true
         env:
@@ -77,7 +79,7 @@ jobs:
           
           cd terraform
           echo "Recreating with Terraform..."
-          terraform apply -var-file="environments/dev.tfvars" -auto-approve
+          terraform apply -var-file="environments/dev.tfvars" -var="sql_admin_password=${{ secrets.SQL_ADMIN_PASSWORD }}" -auto-approve
         env:
           ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
           ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
@@ -88,7 +90,7 @@ jobs:
         working-directory: terraform
         run: |
           echo "Running terraform plan to verify state..."
-          terraform plan -var-file="environments/dev.tfvars" -detailed-exitcode || true
+          terraform plan -var-file="environments/dev.tfvars" -var="sql_admin_password=${{ secrets.SQL_ADMIN_PASSWORD }}" -detailed-exitcode || true
         env:
           ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
           ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
