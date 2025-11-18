@@ -48,14 +48,8 @@ module "key_vault" {
   environment         = var.environment
   sku_name            = var.environment == "prod" ? "premium" : "standard"
 
-  # Secrets to store
-  sql_connection_string            = module.sql_database.connection_string
-  app_insights_connection_string   = azurerm_application_insights.main.connection_string
-  app_insights_instrumentation_key = azurerm_application_insights.main.instrumentation_key
-
-  # Managed identity access policies will be added via RBAC after Container Apps created
-  api_managed_identity_principal_id      = null
-  frontend_managed_identity_principal_id = null
+  # Note: Secrets are created in root main.tf after RBAC propagation
+  # Managed identity access policies added via RBAC after Container Apps created
 
   tags = local.common_tags
 }
@@ -151,11 +145,47 @@ module "container_apps" {
   tags = local.common_tags
 }
 
+# ========================================
+# Key Vault Secrets (created AFTER RBAC assignments propagate)
+# ========================================
+
 # Role assignment: Terraform Service Principal needs to manage Key Vault secrets
 resource "azurerm_role_assignment" "terraform_keyvault" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets Officer"
   principal_id         = data.azurerm_client_config.current.object_id
+}
+
+# Wait for RBAC permissions to propagate (Azure RBAC can take up to 2 minutes)
+resource "time_sleep" "wait_for_rbac" {
+  create_duration = "120s"
+  
+  depends_on = [azurerm_role_assignment.terraform_keyvault]
+}
+
+# Key Vault secrets - created after RBAC propagation
+resource "azurerm_key_vault_secret" "sql_connection" {
+  name         = "DatabaseConnectionString"
+  value        = module.sql_database.connection_string
+  key_vault_id = module.key_vault.id
+
+  depends_on = [time_sleep.wait_for_rbac]
+}
+
+resource "azurerm_key_vault_secret" "app_insights_connection" {
+  name         = "ApplicationInsightsConnectionString"
+  value        = azurerm_application_insights.main.connection_string
+  key_vault_id = module.key_vault.id
+
+  depends_on = [time_sleep.wait_for_rbac]
+}
+
+resource "azurerm_key_vault_secret" "app_insights_instrumentation" {
+  name         = "ApplicationInsightsInstrumentationKey"
+  value        = azurerm_application_insights.main.instrumentation_key
+  key_vault_id = module.key_vault.id
+
+  depends_on = [time_sleep.wait_for_rbac]
 }
 
 # Role assignments for Container Apps
