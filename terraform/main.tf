@@ -75,7 +75,7 @@ module "ai_foundry" {
 # Storage Module (Blob + Queue)
 module "storage" {
   source              = "./modules/storage"
-  name_prefix         = "cva" # Short prefix to ensure space for random suffix
+  name_prefix         = "cvanalyzer"
   environment         = var.environment
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
