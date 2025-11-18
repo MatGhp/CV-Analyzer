@@ -64,14 +64,14 @@ resource "azurerm_storage_container" "resumes" {
 
 # Queue for resume analysis
 resource "azurerm_storage_queue" "resume_analysis" {
-  name               = local.queue_config.main_queue
-  storage_account_id = azurerm_storage_account.main.id
+  name                 = local.queue_config.main_queue
+  storage_account_name = azurerm_storage_account.main.name
 }
 
 # Poison queue for failed messages
 resource "azurerm_storage_queue" "resume_analysis_poison" {
-  name               = local.queue_config.poison_queue
-  storage_account_id = azurerm_storage_account.main.id
+  name                 = local.queue_config.poison_queue
+  storage_account_name = azurerm_storage_account.main.name
 }
 
 # Blob lifecycle management - auto-delete old resumes
