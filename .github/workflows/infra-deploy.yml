@@ -23,6 +23,10 @@ on:
           - test
           - prod
 
+permissions:
+  contents: read
+  pull-requests: write  # Allow commenting on PRs
+
 concurrency:
   group: terraform-${{ github.event.inputs.environment || 'dev' }}
   cancel-in-progress: false
