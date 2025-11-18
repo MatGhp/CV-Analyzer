@@ -43,12 +43,26 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    if (builder.Environment.IsDevelopment())
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
+        options.AddPolicy("AllowAll", policy =>
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        });
+    }
+    else
+    {
+        var frontendUrl = builder.Configuration["Frontend:Url"] ?? "https://ca-cvanalyzer-frontend.proudwater-2b5f3fe1.swedencentral.azurecontainerapps.io";
+        options.AddPolicy("AllowAll", policy =>
+        {
+            policy.WithOrigins(frontendUrl)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        });
+    }
 });
 
 // Application Insights telemetry
@@ -57,7 +71,8 @@ builder.Services.AddApplicationInsightsTelemetry();
 // Health checks with specific checks
 builder.Services.AddHealthChecks()
     .AddCheck<CVAnalyzer.Infrastructure.HealthChecks.BlobStorageHealthCheck>("blob_storage")
-    .AddCheck<CVAnalyzer.Infrastructure.HealthChecks.DocumentIntelligenceHealthCheck>("document_intelligence");
+    .AddCheck<CVAnalyzer.Infrastructure.HealthChecks.DocumentIntelligenceHealthCheck>("document_intelligence")
+    .AddCheck<CVAnalyzer.Infrastructure.HealthChecks.KeyVaultHealthCheck>("key_vault");
 
 var app = builder.Build();
 
