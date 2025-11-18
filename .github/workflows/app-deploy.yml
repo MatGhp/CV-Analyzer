@@ -19,8 +19,8 @@ on:
           - prod
 
 concurrency:
-  group: deploy-${{ github.event.inputs.environment || 'dev' }}
-  cancel-in-progress: false
+  group: deploy-${{ github.event.inputs.environment || 'dev' }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:

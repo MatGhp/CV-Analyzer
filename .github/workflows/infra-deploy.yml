@@ -28,8 +28,8 @@ permissions:
   pull-requests: write  # Allow commenting on PRs
 
 concurrency:
-  group: terraform-${{ github.event.inputs.environment || 'dev' }}
-  cancel-in-progress: false
+  group: terraform-${{ github.event.inputs.environment || 'dev' }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
