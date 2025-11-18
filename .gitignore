@@ -241,3 +241,11 @@ backend/src/**/logs/
 *.pid
 *.seed
 *.pid.lock
+
+# Terraform local validation (do not commit)
+terraform/backend-validation.tf
+.terraform-validation/
+
+# Terraform local validation
+terraform/backend-validation.tf
+.terraform-validation/

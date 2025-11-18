@@ -5,7 +5,7 @@
 # SQL Firewall Rules - Add your development machine IP
 sql_firewall_rules = {
   "AllowDevMachine" = {
-    start_ip_address = "YOUR_IP_HERE"  # e.g., "203.0.113.42"
+    start_ip_address = "YOUR_IP_HERE" # e.g., "203.0.113.42"
     end_ip_address   = "YOUR_IP_HERE"
   }
 }

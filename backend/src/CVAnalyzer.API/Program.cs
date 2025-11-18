@@ -6,16 +6,28 @@ using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 
 var builder = WebApplication.CreateBuilder(args);
 
-Log.Logger = new LoggerConfiguration()
+// Configure Serilog with conditional Application Insights
+var loggerConfig = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
     .WriteTo.Console()
-    .WriteTo.File("logs/cvanalyzer-.log", rollingInterval: RollingInterval.Day)
-    .WriteTo.ApplicationInsights(
-        builder.Configuration["ApplicationInsights:InstrumentationKey"] ?? 
-        builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"],
-        TelemetryConverter.Traces)
-    .CreateLogger();
+    .WriteTo.File("logs/cvanalyzer-.log", rollingInterval: RollingInterval.Day);
+
+// Only add Application Insights if connection string is valid
+var appInsightsConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+if (!string.IsNullOrWhiteSpace(appInsightsConnectionString))
+{
+    try
+    {
+        loggerConfig.WriteTo.ApplicationInsights(appInsightsConnectionString, TelemetryConverter.Traces);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Warning: Failed to configure Application Insights: {ex.Message}");
+    }
+}
+
+Log.Logger = loggerConfig.CreateLogger();
 
 builder.Host.UseSerilog();
 

@@ -2,9 +2,16 @@ name: CI Build and Test
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'bugfix/**'
+      - 'hotfix/**'
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - develop
   workflow_dispatch:
 
 env:

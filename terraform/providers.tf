@@ -11,9 +11,9 @@ terraform {
     }
   }
 
-  # Remote state backend in Azure Storage
-  # Configure via: terraform init -backend-config=backend-<env>.hcl
-  backend "azurerm" {}
+  backend "azurerm" {
+    # Configuration provided via backend config files (backend-<env>.hcl)
+  }
 }
 
 provider "azurerm" {
