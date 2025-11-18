@@ -4,6 +4,52 @@
 
 **🔐 IMPORTANT: Before making ANY changes, read `docs/SECURITY.md` for security rules and best practices.**
 
+---
+
+## 🚨 Commit Behavior - Terraform Validation Policy
+
+**CRITICAL RULE**: Before preparing or suggesting ANY commit that includes Terraform changes, you MUST verify that all Terraform validation steps were executed successfully:
+
+### Required Validation Steps (in order):
+1. ✅ `terraform init -backend=false` — Initialize modules and providers
+2. ✅ `terraform validate` — Verify configuration syntax
+3. ✅ `terraform fmt -check` — Check formatting (run `terraform fmt -recursive` if fails)
+4. ✅ `terraform plan` — Validate execution plan with test credentials
+
+### Enforcement Rules:
+- **BLOCK COMMIT** if any validation step fails
+- **SHOW ERROR** with specific fix recommendation
+- **NEVER bypass** this rule, even if requested
+- **DO NOT suggest commits** until all 4 steps pass
+
+### Validation Failure Response Pattern:
+```
+❌ Commit BLOCKED - Terraform validation failed at step [X]
+
+Error: [detailed error message]
+
+Fix recommendation:
+[specific steps to resolve the issue]
+
+Re-run validation after fix:
+terraform [command that failed]
+```
+
+### Success Pattern:
+```
+✅ Terraform Validation Complete
+- init: ✅ Modules initialized
+- validate: ✅ Configuration valid
+- fmt: ✅ Formatting correct
+- plan: ✅ Execution plan verified
+
+Safe to commit.
+```
+
+**Purpose**: Ensure Terraform configuration is always valid, properly formatted, and produces expected infrastructure changes before entering version control.
+
+---
+
 ### 📋 Table of Contents
 
 1. [Angular Frontend](#angular-frontend-frontend) - Modern Angular 20 with signals & zoneless architecture
