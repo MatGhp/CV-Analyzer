@@ -23,8 +23,17 @@ resource "random_string" "storage_suffix" {
   }
 }
 
+# Locals for name generation with proper length management
+locals {
+  # Storage account names: 3-24 chars, lowercase alphanumeric only
+  max_prefix_length = 24 - 8 # Reserve 8 chars for random suffix
+  sanitized_prefix  = lower(replace("${var.name_prefix}${var.environment}", "/[^a-z0-9]/", ""))
+  truncated_prefix  = substr(local.sanitized_prefix, 0, local.max_prefix_length)
+  storage_name      = "${local.truncated_prefix}${random_string.storage_suffix.result}"
+}
+
 resource "azurerm_storage_account" "main" {
-  name                     = lower(substr("${replace(var.name_prefix, "-", "")}${var.environment}${random_string.storage_suffix.result}", 0, 24))
+  name                     = local.storage_name
   resource_group_name      = var.resource_group_name
   location                 = var.location
   account_tier             = "Standard"
@@ -55,14 +64,14 @@ resource "azurerm_storage_container" "resumes" {
 
 # Queue for resume analysis
 resource "azurerm_storage_queue" "resume_analysis" {
-  name               = local.queue_config.main_queue
-  storage_account_id = azurerm_storage_account.main.id
+  name                 = local.queue_config.main_queue
+  storage_account_name = azurerm_storage_account.main.name
 }
 
 # Poison queue for failed messages
 resource "azurerm_storage_queue" "resume_analysis_poison" {
-  name               = local.queue_config.poison_queue
-  storage_account_id = azurerm_storage_account.main.id
+  name                 = local.queue_config.poison_queue
+  storage_account_name = azurerm_storage_account.main.name
 }
 
 # Blob lifecycle management - auto-delete old resumes

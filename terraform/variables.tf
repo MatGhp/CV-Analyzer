@@ -100,6 +100,11 @@ variable "max_replicas" {
     condition     = var.max_replicas >= 1 && var.max_replicas <= 30
     error_message = "Maximum replicas must be between 1 and 30"
   }
+
+  validation {
+    condition     = var.max_replicas >= var.min_replicas
+    error_message = "Maximum replicas must be greater than or equal to minimum replicas"
+  }
 }
 
 variable "sql_firewall_rules" {
@@ -109,4 +114,15 @@ variable "sql_firewall_rules" {
     end_ip_address   = string
   }))
   default = {}
+}
+
+variable "sql_database_sku" {
+  description = "SQL Database SKU (Basic, S0-S12, P1-P15, etc.)"
+  type        = string
+  default     = "Basic"
+
+  validation {
+    condition     = can(regex("^(Basic|S[0-9]|S1[0-2]|P[1-9]|P1[0-5]|GP_.*|BC_.*)", var.sql_database_sku))
+    error_message = "Database SKU must be a valid Azure SQL Database SKU."
+  }
 }

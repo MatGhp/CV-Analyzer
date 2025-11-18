@@ -2,7 +2,7 @@ resource "azurerm_cognitive_account" "ai_foundry" {
   name                = var.ai_hub_name
   location            = var.location
   resource_group_name = var.resource_group_name
-  kind                = "AIServices"
+  kind                = "OpenAI"
   sku_name            = var.sku_name
 
   identity {

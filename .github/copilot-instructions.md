@@ -9,6 +9,11 @@
 1. [Angular Frontend](#angular-frontend-frontend) - Modern Angular 20 with signals & zoneless architecture
 2. [.NET Backend Service](#net-backend-service-backend) - Clean Architecture with CQRS pattern
 3. [.NET AgentService](#net-agentservice-backendsrccvanalyzeragentservice) - AI-powered resume analysis
+4. [Testing Patterns](#testing-patterns) - xUnit, FluentAssertions, NSubstitute patterns
+5. [Development Workflows & Tooling](#development-workflows--tooling) - Docker, Git, local dev options
+6. [Infrastructure & Deployment](#infrastructure--deployment) - Terraform modules, Container Apps, CI/CD
+7. [Observability & Health Checks](#observability--health-checks) - Serilog, Application Insights, health endpoints
+8. [Future Architecture](#future-architecture-planned-migration) - Durable Agents roadmap
 
 ---
 
@@ -683,6 +688,436 @@ See `backend/src/CVAnalyzer.Infrastructure/BackgroundServices/ResumeAnalysisWork
 
 ---
 
+---
+
+## Testing Patterns
+
+### Test Structure
+
+```
+backend/tests/
+├── CVAnalyzer.UnitTests/
+│   ├── Domain/              # Entity/domain logic tests
+│   └── Features/            # Validator and handler tests (CQRS)
+└── CVAnalyzer.IntegrationTests/
+    └── Controllers/         # API endpoint tests
+```
+
+### Unit Tests (xUnit + FluentAssertions + NSubstitute)
+
+**Test naming convention:**
+```csharp
+public class UploadResumeCommandValidatorTests
+{
+    [Fact]
+    public void Should_Have_Error_When_UserId_Is_Empty()
+    {
+        // Arrange
+        using var stream = new MemoryStream(new byte[100]);
+        var command = new UploadResumeCommand(string.Empty, "test.pdf", stream);
+        
+        // Act
+        var result = _validator.Validate(command);
+        
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "UserId");
+    }
+}
+```
+
+**Pattern**: `Should_ExpectedBehavior_When_StateUnderTest`
+
+**Key libraries:**
+- **xUnit**: Test framework (`[Fact]`, `[Theory]`)
+- **FluentAssertions**: Readable assertions (`.Should().Be()`, `.Should().Contain()`)
+- **NSubstitute**: Mocking (`.Substitute.For<IInterface>()`)
+
+### Running Tests
+
+```powershell
+# Run all tests
+cd backend
+dotnet test
+
+# Run specific test project
+dotnet test tests/CVAnalyzer.UnitTests
+
+# Run with coverage
+dotnet test --collect:"XPlat Code Coverage"
+
+# Run specific test
+dotnet test --filter "FullyQualifiedName~UploadResumeCommandValidatorTests"
+```
+
+### Test Patterns
+
+**Validator tests** (FluentValidation):
+```csharp
+public class MyCommandValidatorTests
+{
+    private readonly MyCommandValidator _validator = new();
+
+    [Fact]
+    public void Should_Fail_When_Property_Invalid()
+    {
+        var command = new MyCommand(invalidValue: null);
+        var result = _validator.Validate(command);
+        
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.PropertyName == "PropertyName");
+    }
+}
+```
+
+**Handler tests** (with mocked dependencies):
+```csharp
+public class MyCommandHandlerTests
+{
+    private readonly IApplicationDbContext _context = Substitute.For<IApplicationDbContext>();
+    private readonly MyCommandHandler _handler;
+
+    public MyCommandHandlerTests()
+    {
+        _handler = new MyCommandHandler(_context);
+    }
+
+    [Fact]
+    public async Task Should_Create_Entity_When_Valid()
+    {
+        // Arrange
+        var command = new MyCommand("valid");
+        
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+        
+        // Assert
+        result.Should().NotBeEmpty();
+        await _context.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+}
+```
+
+**Integration tests** (WebApplicationFactory):
+```csharp
+public class HealthControllerTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly HttpClient _client;
+
+    public HealthControllerTests(WebApplicationFactory<Program> factory)
+    {
+        _client = factory.CreateClient();
+    }
+
+    [Fact]
+    public async Task Health_Returns_OK()
+    {
+        var response = await _client.GetAsync("/api/health");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+}
+```
+
+### Test Coverage Guidance
+
+**What to test:**
+- ✅ Validators (all rules, edge cases)
+- ✅ Domain entities (business logic)
+- ✅ Handlers (happy path + error scenarios)
+- ✅ Controllers (endpoint contracts)
+- ✅ Critical services (blob storage, queue operations)
+
+**What NOT to test:**
+- ❌ Framework code (EF Core, MediatR internals)
+- ❌ DTOs/Models without logic
+- ❌ Configuration classes
+- ❌ Simple property getters/setters
+
+---
+
+## Development Workflows & Tooling
+
+### Docker Management (PowerShell Script)
+
+Use `docker-manage.ps1` for common Docker operations (from repository root):
+
+```powershell
+# Build and run full stack
+.\docker-manage.ps1 -Action start
+
+# Stop all services
+.\docker-manage.ps1 -Action stop
+
+# Rebuild containers
+.\docker-manage.ps1 -Action rebuild
+
+# View logs
+.\docker-manage.ps1 -Action logs
+```
+
+**Quick docker-compose reference:**
+```powershell
+# Start stack in background
+docker-compose up -d
+
+# View real-time logs
+docker-compose logs -f api
+
+# Rebuild specific service
+docker-compose build frontend
+docker-compose up -d frontend
+
+# Clean up everything
+docker-compose down -v  # Removes volumes (SQL data!)
+```
+
+### Git Workflow (Conventional Commits)
+
+**Branch naming:**
+```bash
+git switch -c feat/frontend-upload
+git switch -c fix/backend-null-ref
+git switch -c chore/terraform-cleanup
+```
+
+**Commit format** (enforced by convention):
+```bash
+feat(frontend): add drag-and-drop resume upload
+fix(ai-service): handle empty suggestion list parsing
+chore(terraform): remove obsolete state backups
+refactor(backend): simplify queue service interface
+docs(readme): update local setup instructions
+```
+
+**Pre-commit hook** (auto-installed):
+- Blocks commits with secrets (API keys, passwords, connection strings)
+- Approved placeholders: `<PASSWORD_PLACEHOLDER>`, `YOUR_API_KEY_HERE`, `YOUR_PASSWORD_HERE`
+- Hook location: `.git/hooks/pre-commit`
+
+**Daily workflow:**
+```bash
+# Rebase daily to avoid merge conflicts
+git fetch origin
+git rebase origin/main
+
+# If conflicts:
+# 1. Resolve in editor
+# 2. Stage resolved files
+git add <resolved-file>
+git rebase --continue
+```
+
+### Local Development Environments
+
+**Option 1: Docker Compose (full stack, no Azure)**
+```powershell
+docker-compose up -d
+# Frontend: http://localhost:4200
+# Backend: http://localhost:5000
+# SQL: localhost:1433 (sa/<PASSWORD_PLACEHOLDER>)
+```
+
+**Option 2: Local .NET + Azure Resources** (see `RUNNING_LOCALLY.md`)
+```powershell
+cd backend/src/CVAnalyzer.API
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+dotnet run
+# Requires: Azure CLI login, appsettings.Development.json with Azure configs
+```
+
+**Option 3: Frontend dev server + Docker backend**
+```bash
+# Terminal 1: Backend
+docker-compose up -d api sqlserver
+
+# Terminal 2: Frontend
+cd frontend
+npm start  # Uses proxy.conf.json -> http://localhost:5167
+```
+
+---
+
+## Infrastructure & Deployment
+
+### Terraform Module Structure
+
+**Modular design** (`terraform/modules/`):
+```
+modules/
+├── acr/                     # Azure Container Registry
+├── ai-foundry/              # Azure OpenAI + AI Services
+├── container-apps/          # Container Apps Environment + 3 apps
+├── document-intelligence/   # Form Recognizer for PDF extraction
+├── sql-database/           # SQL Server + Database
+└── storage/                # Blob Storage + Queues
+```
+
+**Environment-specific configs** (`terraform/environments/*.tfvars`):
+- `dev.tfvars` - Development (minimal SKUs, no resource locks)
+- `test.tfvars` - Staging (mid-tier SKUs, threat detection)
+- `prod.tfvars` - Production (high SKUs, locks, network restrictions)
+
+**Naming convention**: `{resource-type}-cvanalyzer-{environment}`
+- Examples: `rg-cvanalyzer-dev`, `sql-cvanalyzer-prod`, `kv-cvanalyzer-test`
+
+**Lifecycle management** (Container Apps):
+```terraform
+lifecycle {
+  ignore_changes = [
+    template[0].container[0].image,  # CI/CD updates image
+    template[0].revision_suffix      # Preserve revisions
+  ]
+}
+```
+
+Why: Terraform creates placeholder containers; GitHub Actions app-deploy.yml deploys real images. This prevents Terraform from reverting CI/CD updates.
+
+### Container Apps Internal DNS Pattern
+
+**Critical deployment pattern**: Apps in the same Container Apps Environment communicate via internal DNS using just the app name:
+
+**nginx.conf** (static, no environment variables):
+```nginx
+location /api/ {
+    proxy_pass http://ca-cvanalyzer-api:8080/api/;
+}
+```
+
+**Resolution across environments:**
+| Environment | Frontend → API | Resolves To |
+|-------------|---------------|-------------|
+| Dev | `http://ca-cvanalyzer-api:8080` | Dev API instance |
+| Test | `http://ca-cvanalyzer-api:8080` | Test API instance |
+| Prod | `http://ca-cvanalyzer-api:8080` | Prod API instance |
+
+**Benefits:**
+- ✅ Same Docker image works in all environments (no config changes)
+- ✅ No environment variables or templating needed
+- ✅ Faster (internal network, no external routing)
+- ✅ Secure (traffic stays within Container Apps Environment)
+
+**When NOT to use**: Apps in different Container Apps Environments, different regions, or non-Container App backends (use env vars).
+
+### CI/CD Pipeline (GitHub Actions)
+
+**Workflows** (`.github/workflows/`):
+- `app-deploy.yml` - Builds Docker images, pushes to ACR, deploys to Container Apps
+- Triggered on push to `main` branch
+- Uses GitHub Secrets for Azure credentials
+
+**Deployment flow:**
+1. Build Docker images (frontend + backend)
+2. Push to Azure Container Registry (ACR)
+3. Update Container Apps with new image tags
+4. Container Apps pull images via managed identity (no registry password)
+
+**Required GitHub Secrets:**
+- `AZURE_CREDENTIALS` - Service principal JSON
+- `ACR_LOGIN_SERVER` - ACR endpoint
+- SQL passwords, Azure OpenAI keys (per environment)
+
+---
+
+## Observability & Health Checks
+
+### Serilog Configuration
+
+**Sinks** (configured in `appsettings.json`):
+1. **Console** - Development visibility
+2. **File** - Rolling daily logs (`logs/cvanalyzer-{Date}.log`)
+3. **Application Insights** - Production telemetry (traces, exceptions, metrics)
+
+**Usage pattern:**
+```csharp
+public class MyHandler
+{
+    private readonly ILogger<MyHandler> _logger;
+    
+    public MyHandler(ILogger<MyHandler> logger) => _logger = logger;
+    
+    public async Task<Result> Handle(Request request, CancellationToken ct)
+    {
+        _logger.LogInformation("Processing request for {UserId}", request.UserId);
+        // Never log sensitive data (passwords, PII, tokens)
+    }
+}
+```
+
+### Health Checks
+
+**Endpoints:**
+- `/health` - Liveness probe (Container Apps)
+- `/api/health` - Application health with dependencies
+
+**Configured checks** (`Program.cs`):
+```csharp
+builder.Services.AddHealthChecks()
+    .AddCheck<BlobStorageHealthCheck>("blob_storage")
+    .AddCheck<DocumentIntelligenceHealthCheck>("document_intelligence");
+```
+
+**Response format:**
+```json
+{
+  "status": "Healthy",
+  "checks": {
+    "blob_storage": { "status": "Healthy" },
+    "document_intelligence": { "status": "Healthy" }
+  }
+}
+```
+
+### Application Insights Integration
+
+**Automatic telemetry:**
+- HTTP requests (latency, status codes)
+- Dependency calls (SQL, Azure Storage, Azure OpenAI)
+- Exceptions with stack traces
+- Custom events/metrics via `ILogger`
+
+**Query examples** (Azure Portal → Application Insights → Logs):
+```kusto
+// Failed resume analyses
+traces
+| where message contains "analysis failed"
+| project timestamp, message, customDimensions
+
+// Slow AI calls
+dependencies
+| where type == "Http" and target contains "openai"
+| where duration > 30000  // 30 seconds
+| summarize count() by bin(timestamp, 1h)
+```
+
+---
+
+## Future Architecture (Planned Migration)
+
+### Durable Agents Roadmap
+
+**Current state (v1.0)**: Queue-based background processing with `ResumeAnalysisWorker` + Azure Storage Queues
+
+**Planned migration (v2.0)**: Microsoft Agent Framework Durable Agents with Azure Functions
+
+**Key benefits:**
+- 🔄 **Stateful conversations**: Multi-turn iterative resume refinement (user feedback loop)
+- 🤝 **Multi-agent orchestration**: Specialized agents (content analyzer, ATS scorer, keyword extractor)
+- 💪 **Fault tolerance**: Deterministic orchestrations survive crashes with automatic checkpointing
+- 🔍 **Visual debugging**: Durable Task Scheduler dashboard for workflow inspection
+- ⚡ **Serverless scaling**: Azure Functions Flex Consumption (pay per execution)
+- 💰 **Cost reduction**: Estimated 30-40% savings vs. always-on Container Apps for background processing
+
+**Migration scope** (see `docs/DURABLE_AGENTS_ROADMAP.md`):
+- Replace `ResumeAnalysisWorker` with Durable Functions orchestrator
+- Convert `ResumeAnalysisAgent` to Agent Framework's `CloudAgent` pattern
+- Implement conversation threads for stateful analysis
+- Integrate with Durable Task Scheduler for observability
+- Estimated effort: 3-4 weeks
+
+**Why not now?**: v1.0 focused on MVP delivery; Durable Agents add complexity justified by production usage patterns.
+
+---
+
 ## Summary
 
 This monorepo contains two tightly integrated services:
@@ -691,14 +1126,27 @@ This monorepo contains two tightly integrated services:
 2. **.NET Backend + AgentService** (`backend/`) - Business logic with Clean Architecture + CQRS + integrated AI analysis
 
 **Development workflow:**
-- Local: Run each service independently or use docker-compose
+- Local: Run each service independently or use docker-compose (full stack in 1 command)
 - Production: Multi-container deployment with nginx reverse proxy (Azure Container Apps)
+- Git: Short-lived branches, Conventional Commits, daily rebasing
 
 **Key principles:**
 - Frontend: Signals for state, standalone components, lazy loading
 - Backend: CQRS with MediatR, automatic validation, strict architecture layers
 - AgentService: Azure OpenAI SDK, DefaultAzureCredential, structured JSON output
-- Background processing: Queue-based async analysis with Document Intelligence + AI
+- Background processing: Queue-based async analysis with Document Intelligence + AI (v2.0: Durable Agents)
+- Infrastructure: Modular Terraform, Container Apps internal DNS, lifecycle ignore for CI/CD
+- Observability: Serilog + Application Insights, health checks for Container Apps probes
+- Security: Pre-commit hooks, Key Vault for secrets, DefaultAzureCredential everywhere, input validation
 - All: Security-first (no secrets in code, input validation, error handling)
+
+**Quick reference docs:**
+- **Security**: `docs/SECURITY.md` (READ BEFORE ANY CODE CHANGES)
+- **Local setup**: `RUNNING_LOCALLY.md` (Azure resources) or `QUICKSTART.md` (Docker only)
+- **Architecture**: `docs/ARCHITECTURE.md` (system design, Clean Architecture, data flows)
+- **DevOps**: `docs/DEVOPS.md` (deployment, troubleshooting, Container Apps patterns)
+- **Git workflow**: `docs/GIT_WORKFLOW.md` (branching, commits, rebasing)
+- **Terraform**: `docs/TERRAFORM.md` (IaC details, module usage)
+- **Future**: `docs/DURABLE_AGENTS_ROADMAP.md` (v2.0 migration plan)
 
 **Need more detail?** Tell me which area to expand (e.g., testing patterns, EF migrations, Angular components, AgentService integration, queue processing, Terraform modules, CI/CD setup) and I'll provide concrete examples from the codebase.

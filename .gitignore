@@ -1,17 +1,27 @@
-# Terraform state and plans
-terraform/.terraform/
-terraform/*.tfstate
-terraform/*.tfstate.*
-terraform/*tfplan*
-terraform/*.backup*
-terraform/*backup*
-terraform/*.lock.hcl
+# Terraform state and plans (CRITICAL: Contains sensitive data)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*tfplan*
+*.backup
+**/.terraform.lock.hcl
 
 # Terraform variables (except examples)
-terraform/*.tfvars
-!terraform/*.tfvars.example
-terraform/**/*.tfvars
-!terraform/**/*.tfvars.example
+*.tfvars
+!*.tfvars.example
+*.auto.tfvars
+!*.auto.tfvars.example
+
+# Terraform local overrides
+*.local.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform crash logs
+crash.log
+crash.*.log
 
 # VS Code
 .vscode/

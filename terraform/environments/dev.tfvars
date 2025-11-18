@@ -9,6 +9,7 @@ location    = "swedencentral"
 
 # SQL Configuration
 sql_admin_username = "cvadmin_dev" # Non-standard username for security
+sql_database_sku   = "Basic"       # Basic SKU for dev (cost-effective)
 # Note: Set the SQL admin password via a local environment variable on your machine (do not commit real secrets or commands).
 
 # Container Registry Configuration
@@ -26,10 +27,13 @@ model_capacity        = 10 # 10k tokens/min for dev
 image_tag = "latest"
 
 # SQL Firewall Rules
-sql_firewall_rules = {
-  "AllowDevMachine" = {
-    start_ip_address = "176.3.53.114"
-    end_ip_address   = "176.3.53.114"
-  }
-}
+# Add your IP address for local development access
+# Create a dev.local.tfvars file (gitignored) with your actual IP:
+# sql_firewall_rules = {
+#   "AllowDevMachine" = {
+#     start_ip_address = "YOUR_IP_HERE"
+#     end_ip_address   = "YOUR_IP_HERE"
+#   }
+# }
+sql_firewall_rules = {}
 

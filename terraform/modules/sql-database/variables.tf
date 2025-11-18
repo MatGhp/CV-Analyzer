@@ -33,3 +33,14 @@ variable "firewall_rules" {
   }))
   default = {}
 }
+
+variable "database_sku" {
+  description = "Database SKU (Basic, S0-S12, P1-P15, GP_Gen5_2, etc.)"
+  type        = string
+  default     = "Basic"
+
+  validation {
+    condition     = can(regex("^(Basic|S[0-9]|S1[0-2]|P[1-9]|P1[0-5]|GP_.*|BC_.*)", var.database_sku))
+    error_message = "Database SKU must be a valid Azure SQL Database SKU."
+  }
+}

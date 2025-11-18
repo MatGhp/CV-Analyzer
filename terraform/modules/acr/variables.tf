@@ -22,9 +22,14 @@ variable "sku" {
 }
 
 variable "admin_enabled" {
-  description = "Enable admin user for ACR"
+  description = "Enable admin user for ACR (NOT RECOMMENDED - use managed identity instead)"
   type        = bool
   default     = false
+
+  validation {
+    condition     = var.admin_enabled == false
+    error_message = "ACR admin credentials should not be enabled. Use managed identity for authentication."
+  }
 }
 
 variable "tags" {

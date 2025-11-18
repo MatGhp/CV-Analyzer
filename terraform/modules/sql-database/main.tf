@@ -21,7 +21,7 @@ resource "azurerm_mssql_server" "main" {
 resource "azurerm_mssql_database" "main" {
   name      = "cvanalyzer-db-${var.environment}"
   server_id = azurerm_mssql_server.main.id
-  sku_name  = "Basic"
+  sku_name  = var.database_sku
 
   # SECURITY: Enable threat detection for production
   threat_detection_policy {

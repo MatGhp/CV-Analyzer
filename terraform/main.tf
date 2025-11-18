@@ -45,6 +45,7 @@ module "sql_database" {
   admin_username      = var.sql_admin_username
   admin_password      = var.sql_admin_password
   firewall_rules      = var.sql_firewall_rules
+  database_sku        = var.sql_database_sku
 }
 
 # Azure Container Registry Module
@@ -54,7 +55,7 @@ module "acr" {
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   sku                 = var.acr_sku
-  admin_enabled       = true
+  admin_enabled       = false # Use managed identity for Container Apps
 
   tags = local.common_tags
 }
@@ -74,7 +75,7 @@ module "ai_foundry" {
 # Storage Module (Blob + Queue)
 module "storage" {
   source              = "./modules/storage"
-  name_prefix         = "cvanalyzer"
+  name_prefix         = "cva" # Short prefix to ensure space for random suffix
   environment         = var.environment
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location

@@ -34,8 +34,8 @@ resource "azurerm_container_app" "frontend" {
   # CI/CD pipeline (app-deploy.yml) manages container updates
   lifecycle {
     ignore_changes = [
-      template[0].container[0].image,  # Don't revert image updates from CI/CD
-      template[0].revision_suffix      # Preserve revision history
+      template[0].container[0].image, # Don't revert image updates from CI/CD
+      template[0].revision_suffix     # Preserve revision history
     ]
   }
 
@@ -44,7 +44,7 @@ resource "azurerm_container_app" "frontend" {
     max_replicas = var.max_replicas
 
     container {
-      name   = "frontend"
+      name = "frontend"
       # Use Microsoft's hello-world as placeholder
       # Real image deployed by GitHub Actions app-deploy.yml
       image  = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
@@ -55,9 +55,6 @@ resource "azurerm_container_app" "frontend" {
         name  = "NGINX_PORT"
         value = "80"
       }
-
-      # NOTE: Health probes removed for infrastructure deployment with placeholder images
-      # Will be added via CI/CD when deploying real application images that respond on port 80
     }
   }
 
@@ -107,14 +104,11 @@ resource "azurerm_container_app" "api" {
     max_replicas = var.max_replicas
 
     container {
-      name   = "api"
+      name = "api"
       # Placeholder image - real app deployed by GitHub Actions
       image  = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
       cpu    = "1.0"
       memory = "2.0Gi"
-
-      # NOTE: Health probes removed for infrastructure deployment with placeholder images
-      # Will be added via CI/CD when deploying real application images that respond on port 80
 
       env {
         name  = "ASPNETCORE_ENVIRONMENT"
