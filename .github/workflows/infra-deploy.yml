@@ -100,7 +100,7 @@ jobs:
       run: terraform apply -auto-approve tfplan
       
     - name: Show Infrastructure Outputs
-      if: success()
+      if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && success()
       run: |
         echo "## Infrastructure Deployed Successfully" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
