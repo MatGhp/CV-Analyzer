@@ -1,0 +1,81 @@
+name: Fix Container Apps State
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - import
+          - delete-and-recreate
+        default: 'import'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  fix-state:
+    runs-on: ubuntu-latest
+    environment: dev
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init -backend-config="backend-dev.hcl"
+
+      - name: Import Container Apps (if action=import)
+        if: ${{ github.event.inputs.action == 'import' }}
+        working-directory: terraform
+        run: |
+          echo "Importing frontend Container App..."
+          terraform import \
+            -var-file="environments/dev.tfvars" \
+            module.container_apps.azurerm_container_app.frontend \
+            /subscriptions/${{ secrets.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-cvanalyzer-dev/providers/Microsoft.App/containerApps/ca-cvanalyzer-frontend || true
+          
+          echo "Importing API Container App..."
+          terraform import \
+            -var-file="environments/dev.tfvars" \
+            module.container_apps.azurerm_container_app.api \
+            /subscriptions/${{ secrets.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-cvanalyzer-dev/providers/Microsoft.App/containerApps/ca-cvanalyzer-api || true
+
+      - name: Delete and Recreate (if action=delete-and-recreate)
+        if: ${{ github.event.inputs.action == 'delete-and-recreate' }}
+        run: |
+          echo "Deleting Container Apps..."
+          az containerapp delete --name ca-cvanalyzer-frontend --resource-group rg-cvanalyzer-dev --yes || true
+          az containerapp delete --name ca-cvanalyzer-api --resource-group rg-cvanalyzer-dev --yes || true
+          
+          echo "Waiting for deletion to complete..."
+          sleep 120
+          
+          cd terraform
+          echo "Recreating with Terraform..."
+          terraform apply -var-file="environments/dev.tfvars" -auto-approve
+
+      - name: Verify State
+        working-directory: terraform
+        run: |
+          echo "Running terraform plan to verify state..."
+          terraform plan -var-file="environments/dev.tfvars" -detailed-exitcode || true
+
+      - name: Show Summary
+        run: |
+          echo "✅ State fix workflow completed!"
+          echo "Check the logs above for import results."
