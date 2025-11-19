@@ -1131,6 +1131,68 @@ lifecycle {
 
 Why: Terraform creates placeholder containers; GitHub Actions app-deploy.yml deploys real images. This prevents Terraform from reverting CI/CD updates.
 
+### Container Apps Health Probes
+
+**⚠️ CRITICAL: ALL Container Apps MUST have health probes configured.**
+
+According to Azure best practices, every container app should define:
+- **Liveness Probe**: Detects and restarts failed containers
+- **Readiness Probe**: Ensures only healthy containers receive traffic
+- **Startup Probe** (optional): For slow-starting applications
+
+**Current Configuration** (`terraform/modules/container-apps/main.tf`):
+```hcl
+# Frontend Container App
+liveness_probe {
+  transport        = "HTTP"
+  port             = 80
+  path             = "/health"
+  interval_seconds = 10
+  timeout          = 3
+}
+
+readiness_probe {
+  transport        = "HTTP"
+  port             = 80
+  path             = "/health"
+  interval_seconds = 5
+  timeout          = 3
+  initial_delay    = 3
+}
+
+# Backend API Container App
+liveness_probe {
+  transport        = "HTTP"
+  port             = 8080
+  path             = "/health"
+  interval_seconds = 10
+  timeout          = 3
+}
+
+readiness_probe {
+  transport        = "HTTP"
+  port             = 8080
+  path             = "/health"
+  interval_seconds = 5
+  timeout          = 3
+  initial_delay    = 3
+}
+```
+
+**Health Endpoints**:
+- Frontend: `GET /health` → Returns 200 with "healthy" text (nginx.conf line 38)
+- Backend:
+  - Health probes: `GET /health` (port 8080) → Used by Container Apps for liveness/readiness checks
+  - External health checks: `GET /api/health` → Returns JSON health status (HealthController.cs)
+
+**Why This Matters**:
+- Without probes, Container Apps cannot verify container health
+- Revisions may fail activation with "Revision activation failed" error
+- Traffic may route to unhealthy containers
+- No automatic recovery from hung processes
+
+---
+
 ### Container Apps Network Configuration
 
 **⚠️ CRITICAL: Current implementation uses EXTERNAL routing, NOT internal DNS.**

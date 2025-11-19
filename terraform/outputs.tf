@@ -28,3 +28,12 @@ output "resource_group_name" {
   value       = azurerm_resource_group.main.name
 }
 
+output "frontend_name" {
+  description = "Frontend Container App name"
+  value       = module.container_apps.frontend_name
+}
+
+output "api_name" {
+  description = "API Container App name"
+  value       = module.container_apps.api_name
+}
