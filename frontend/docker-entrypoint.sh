@@ -7,6 +7,12 @@ if [ -z "$API_FQDN" ]; then
     exit 1
 fi
 
+# Validate FQDN format (alphanumeric, dots, hyphens only)
+if ! echo "$API_FQDN" | grep -qE '^[a-zA-Z0-9][a-zA-Z0-9.-]*[a-zA-Z0-9]$'; then
+    echo "ERROR: Invalid API_FQDN format: $API_FQDN"
+    exit 1
+fi
+
 # Substitute environment variables in nginx.conf.template
 # API_FQDN is passed from Container Apps environment variable
 envsubst '${API_FQDN}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
@@ -23,7 +29,7 @@ nginx -t || {
 echo "=== Frontend Container Startup ==="
 echo "API_FQDN: $API_FQDN"
 echo "Testing API connectivity..."
-wget --spider --timeout=5 "https://$API_FQDN/health" 2>&1 || echo "WARNING: API health check failed at startup (may not be ready yet)"
+wget --spider --timeout=5 "https://$API_FQDN/api/health" 2>&1 || echo "WARNING: API health check failed at startup (may not be ready yet)"
 echo "nginx configuration validated successfully"
 echo "=================================="
 

@@ -43,11 +43,13 @@ resource "azurerm_container_app" "frontend" {
     }
   }
 
-  # Lifecycle: Ignore template changes after initial creation
-  # CI/CD pipeline (app-deploy.yml) manages container updates
+  # Lifecycle: Ignore only image and revision changes after initial creation
+  # CI/CD pipeline (app-deploy.yml) manages container image updates
+  # Allows Terraform to update other template properties (env vars, resources, etc.)
   lifecycle {
     ignore_changes = [
-      template # Ignore all template changes (image, memory, env vars, etc.)
+      template[0].container[0].image,
+      template[0].revision_suffix
     ]
   }
 
@@ -140,11 +142,13 @@ resource "azurerm_container_app" "api" {
     }
   }
 
-  # Lifecycle: Ignore template changes after initial creation
-  # CI/CD pipeline (app-deploy.yml) manages container updates
+  # Lifecycle: Ignore only image and revision changes after initial creation
+  # CI/CD pipeline (app-deploy.yml) manages container image updates
+  # Allows Terraform to update other template properties (env vars, resources, etc.)
   lifecycle {
     ignore_changes = [
-      template # Ignore all template changes (image, memory, env vars, etc.)
+      template[0].container[0].image,
+      template[0].revision_suffix
     ]
   }
 
