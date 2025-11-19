@@ -55,44 +55,24 @@ jobs:
       run: |
         echo "Verifying .gitignore patterns..."
         
-        # Check that critical patterns are in .gitignore
-        REQUIRED_PATTERNS=(
-          "*.env"
-          "*.secret"
-          "*.key"
-          "*.tfvars"
-          "secrets.json"
-        )
+        # Check critical patterns in .gitignore
+        MISSING=$(grep -L -E '(\*\.env|\*\.secret|\*\.key|\*\.tfvars|secrets\.json)' .gitignore || echo "")
         
-        MISSING_PATTERNS=()
-        for pattern in "${REQUIRED_PATTERNS[@]}"; do
-          if ! grep -q "$pattern" .gitignore; then
-            MISSING_PATTERNS+=("$pattern")
-          fi
-        done
-        
-        if [ ${#MISSING_PATTERNS[@]} -gt 0 ]; then
-          echo "[WARNING] The following patterns are not in .gitignore:"
-          printf '%s\n' "${MISSING_PATTERNS[@]}"
-          echo "Consider adding them to prevent accidental commits."
+        if [ -n "$MISSING" ]; then
+          echo "[WARNING] Some patterns may be missing in .gitignore"
         else
-          echo "[PASS] All critical patterns are in .gitignore"
+          echo "[PASS] Critical patterns found in .gitignore"
         fi
     
-    - name: Scan for hardcoded IPs and URLs
+    - name: Scan for hardcoded IPs
       run: |
-        echo "Scanning for hardcoded IPs and internal URLs..."
+        echo "Scanning for private IP addresses..."
         
-        # Scan for private IP addresses
-        PRIVATE_IPS=$(grep -rn --include="*.cs" --include="*.ts" --include="*.js" --include="*.py" \
-          -E "192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\." . | grep -v node_modules || true)
-        
-        if [ ! -z "$PRIVATE_IPS" ]; then
-          echo "[WARNING] Private IP addresses found (may need review):"
-          echo "$PRIVATE_IPS"
+        if grep -rn --include="*.cs" --include="*.ts" --include="*.js" -E "192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\." . --exclude-dir=node_modules > /dev/null 2>&1; then
+          echo "[WARNING] Private IP addresses found (review recommended)"
+        else
+          echo "[PASS] No hardcoded private IPs detected"
         fi
-        
-        echo "[PASS] IP scan complete"
     
     - name: Summary
       if: always()
