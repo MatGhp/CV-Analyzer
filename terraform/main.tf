@@ -4,7 +4,7 @@ locals {
     Environment = var.environment
     Application = "cvanalyzer"
   }
-  
+
   # Health probes: Bootstrap Exception to Azure Best Practices
   # - Production: ALWAYS enabled (true) per Azure guidelines
   # - Dev/Test: Disabled (false) ONLY during initial Terraform deployment with placeholder images
