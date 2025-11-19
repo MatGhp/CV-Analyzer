@@ -229,16 +229,25 @@ resource "azurerm_container_app" "api" {
         value = var.app_insights_instrumentation_key
       }
 
+      # Liveness probe - detects and restarts failed containers
+      # Checks /health endpoint to ensure API is responding
       liveness_probe {
-        transport = "HTTP"
-        port      = 8080
-        path      = "/health"
+        transport        = "HTTP"
+        port             = 8080
+        path             = "/health"
+        interval_seconds = 10
+        timeout          = 3
       }
 
+      # Readiness probe - ensures only healthy containers receive traffic
+      # Critical for preventing 502/503 errors during deployment
       readiness_probe {
-        transport = "HTTP"
-        port      = 8080
-        path      = "/health"
+        transport        = "HTTP"
+        port             = 8080
+        path             = "/health"
+        interval_seconds = 5
+        timeout          = 3
+        initial_delay    = 3
       }
     }
   }
@@ -246,7 +255,7 @@ resource "azurerm_container_app" "api" {
   ingress {
     target_port                = 8080
     external_enabled           = true
-    allow_insecure_connections = false  # Enforce HTTPS
+    allow_insecure_connections = false # Enforce HTTPS
     traffic_weight {
       latest_revision = true
       percentage      = 100

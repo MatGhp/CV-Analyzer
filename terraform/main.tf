@@ -159,7 +159,7 @@ resource "azurerm_role_assignment" "terraform_keyvault" {
 # Wait for RBAC permissions to propagate (Azure RBAC can take up to 2 minutes)
 resource "time_sleep" "wait_for_rbac" {
   create_duration = "120s"
-  
+
   depends_on = [azurerm_role_assignment.terraform_keyvault]
 }
 
