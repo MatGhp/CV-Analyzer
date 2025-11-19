@@ -49,6 +49,11 @@ variable "frontend_image" {
   default     = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
 }
 
+variable "enable_health_probes" {
+  description = "Enable health probes (REQUIRED for production per Azure best practices)"
+  type        = bool
+}
+
 variable "api_image" {
   description = "API container image (e.g., acr.azurecr.io/api:latest)"
   type        = string

@@ -1133,12 +1133,17 @@ Why: Terraform creates placeholder containers; GitHub Actions app-deploy.yml dep
 
 ### Container Apps Health Probes
 
-**⚠️ CRITICAL: ALL Container Apps MUST have health probes configured.**
+**⚠️ CRITICAL: ALL Container Apps MUST have health probes configured (with bootstrap exception).**
 
 According to Azure best practices, every container app should define:
 - **Liveness Probe**: Detects and restarts failed containers
 - **Readiness Probe**: Ensures only healthy containers receive traffic
 - **Startup Probe** (optional): For slow-starting applications
+
+**Bootstrap Exception**: During initial Terraform deployment, Container Apps are created with placeholder images
+(mcr.microsoft.com/azuredocs/containerapps-helloworld) that lack /health endpoints. Health probes MUST be disabled
+for dev/test environments during this phase to prevent ActivationFailed errors. After CI/CD deploys real images,
+operators MUST enable health probes. Production environments always require health probes enabled.
 
 **Current Configuration** (`terraform/modules/container-apps/main.tf`):
 ```hcl

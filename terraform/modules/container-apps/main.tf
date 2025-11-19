@@ -1,5 +1,15 @@
 # Azure Container Apps - Simple Module
-# Creates Container Apps Environment + 3 Apps (Frontend, API, AI Service)
+# Creates Container Apps Environment + 2 Apps (Frontend, API)
+#
+# Health Probe Bootstrap Pattern:
+# 1. Initial Terraform deployment uses placeholder images (mcr.microsoft.com/azuredocs/containerapps-helloworld)
+#    that do NOT implement /health endpoints. Health probes must be disabled (enable_health_probes=false)
+#    during this phase to avoid ActivationFailed errors.
+# 2. After Terraform creates infrastructure, CI/CD (GitHub Actions) deploys real container images
+#    that DO implement /health endpoints.
+# 3. Operators should then enable health probes (enable_health_probes=true) in environment tfvars
+#    and re-run Terraform to activate health monitoring per Azure best practices.
+# 4. Production environments default to health probes enabled; dev/test default to disabled for bootstrap.
 
 # Container Apps Environment
 resource "azurerm_container_app_environment" "env" {
@@ -59,25 +69,33 @@ resource "azurerm_container_app" "frontend" {
       # Checks /health endpoint to ensure nginx is responding
       # Note: failure_threshold and success_threshold are not supported by Azure Container Apps Terraform provider
       # Azure uses default values: failure_threshold=3, success_threshold=1
-      liveness_probe {
-        transport        = "HTTP"
-        port             = 80
-        path             = "/health"
-        interval_seconds = 10
-        timeout          = 3
+      # Only enabled when enable_health_probes=true to avoid ActivationFailed with placeholder images
+      dynamic "liveness_probe" {
+        for_each = var.enable_health_probes ? [1] : []
+        content {
+          transport        = "HTTP"
+          port             = 80
+          path             = "/health"
+          interval_seconds = 10
+          timeout          = 3
+        }
       }
 
       # Readiness probe - ensures only healthy containers receive traffic
       # Critical for preventing 502/503 errors during deployment
       # Note: failure_threshold and success_threshold are not supported by Azure Container Apps Terraform provider
       # Azure uses default values: failure_threshold=3, success_threshold=1
-      readiness_probe {
-        transport        = "HTTP"
-        port             = 80
-        path             = "/health"
-        interval_seconds = 5
-        timeout          = 3
-        initial_delay    = 3
+      # Only enabled when enable_health_probes=true to avoid ActivationFailed with placeholder images
+      dynamic "readiness_probe" {
+        for_each = var.enable_health_probes ? [1] : []
+        content {
+          transport        = "HTTP"
+          port             = 80
+          path             = "/health"
+          interval_seconds = 5
+          timeout          = 3
+          initial_delay    = 3
+        }
       }
     }
   }
@@ -237,25 +255,33 @@ resource "azurerm_container_app" "api" {
       # Checks /health endpoint to ensure API is responding
       # Note: failure_threshold and success_threshold are not supported by Azure Container Apps Terraform provider
       # Azure uses default values: failure_threshold=3, success_threshold=1
-      liveness_probe {
-        transport        = "HTTP"
-        port             = 8080
-        path             = "/health"
-        interval_seconds = 10
-        timeout          = 3
+      # Only enabled when enable_health_probes=true to avoid ActivationFailed with placeholder images
+      dynamic "liveness_probe" {
+        for_each = var.enable_health_probes ? [1] : []
+        content {
+          transport        = "HTTP"
+          port             = 8080
+          path             = "/health"
+          interval_seconds = 10
+          timeout          = 3
+        }
       }
 
       # Readiness probe - ensures only healthy containers receive traffic
       # Critical for preventing 502/503 errors during deployment
       # Note: failure_threshold and success_threshold are not supported by Azure Container Apps Terraform provider
       # Azure uses default values: failure_threshold=3, success_threshold=1
-      readiness_probe {
-        transport        = "HTTP"
-        port             = 8080
-        path             = "/health"
-        interval_seconds = 5
-        timeout          = 3
-        initial_delay    = 3
+      # Only enabled when enable_health_probes=true to avoid ActivationFailed with placeholder images
+      dynamic "readiness_probe" {
+        for_each = var.enable_health_probes ? [1] : []
+        content {
+          transport        = "HTTP"
+          port             = 8080
+          path             = "/health"
+          interval_seconds = 5
+          timeout          = 3
+          initial_delay    = 3
+        }
       }
     }
   }
