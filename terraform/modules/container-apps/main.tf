@@ -235,6 +235,8 @@ resource "azurerm_container_app" "api" {
 
       # Liveness probe - detects and restarts failed containers
       # Checks /health endpoint to ensure API is responding
+      # Note: failure_threshold and success_threshold are not supported by Azure Container Apps Terraform provider
+      # Azure uses default values: failure_threshold=3, success_threshold=1
       liveness_probe {
         transport        = "HTTP"
         port             = 8080
@@ -245,6 +247,8 @@ resource "azurerm_container_app" "api" {
 
       # Readiness probe - ensures only healthy containers receive traffic
       # Critical for preventing 502/503 errors during deployment
+      # Note: failure_threshold and success_threshold are not supported by Azure Container Apps Terraform provider
+      # Azure uses default values: failure_threshold=3, success_threshold=1
       readiness_probe {
         transport        = "HTTP"
         port             = 8080
