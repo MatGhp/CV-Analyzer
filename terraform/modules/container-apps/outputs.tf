@@ -29,3 +29,14 @@ output "api_identity_principal_id" {
   description = "API managed identity principal ID"
   value       = azurerm_container_app.api.identity[0].principal_id
 }
+
+output "frontend_name" {
+  description = "Frontend Container App name"
+  value       = azurerm_container_app.frontend.name
+}
+
+output "api_name" {
+  description = "API Container App name"
+  value       = azurerm_container_app.api.name
+}
+

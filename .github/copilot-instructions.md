@@ -1131,6 +1131,58 @@ lifecycle {
 
 Why: Terraform creates placeholder containers; GitHub Actions app-deploy.yml deploys real images. This prevents Terraform from reverting CI/CD updates.
 
+### Container Apps Health Probes
+
+**⚠️ CRITICAL: ALL Container Apps MUST have health probes configured.**
+
+According to Azure best practices, every container app should define:
+- **Liveness Probe**: Detects and restarts failed containers
+- **Readiness Probe**: Ensures only healthy containers receive traffic
+- **Startup Probe** (optional): For slow-starting applications
+
+**Current Configuration** (`terraform/modules/container-apps/main.tf`):
+```hcl
+# Frontend Container App
+liveness_probe {
+  transport = "HTTP"
+  port      = 80
+  path      = "/health"
+}
+
+readiness_probe {
+  transport = "HTTP"
+  port      = 80
+  path      = "/health"
+}
+
+# Backend API Container App
+liveness_probe {
+  transport = "HTTP"
+  port      = 8080
+  path      = "/health"
+}
+
+readiness_probe {
+  transport = "HTTP"
+  port      = 8080
+  path      = "/health"
+}
+```
+
+**Health Endpoints**:
+- Frontend: `GET /health` → Returns 200 with "healthy" text (nginx.conf line 38)
+- Backend: `GET /api/health` → Returns JSON health status (HealthController.cs)
+
+**Why This Matters**:
+- Without probes, Container Apps cannot verify container health
+- Revisions may fail activation with "Revision activation failed" error
+- Traffic may route to unhealthy containers
+- No automatic recovery from hung processes
+
+**See**: `docs/CONTAINER_APPS_HEALTH_FIX.md` for detailed implementation guide
+
+---
+
 ### Container Apps Network Configuration
 
 **⚠️ CRITICAL: Current implementation uses EXTERNAL routing, NOT internal DNS.**
