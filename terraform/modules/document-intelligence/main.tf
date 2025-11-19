@@ -10,17 +10,11 @@ resource "azurerm_cognitive_account" "main" {
   custom_subdomain_name         = "${var.name_prefix}-docintel"
   public_network_access_enabled = true
 
-  # Network ACLs: Allow Container Apps and Azure services
+  # Network ACLs: Allow all for MVP (managed identity token exchange requires accessible endpoint)
   # Note: Container Apps Consumption plan uses dynamic outbound IPs
   # For production, consider Private Endpoints with VNet integration
   network_acls {
-    default_action = "Allow" # "Deny" requires static IPs or Private Endpoint
-    
-    # Bypass Azure services for managed identity token exchange
-    bypass = ["AzureServices"]
-    
-    # IP rules can be added when Container Apps uses static outbound IPs
-    # ip_rules = var.allowed_ip_ranges
+    default_action = "Allow"
   }
 
   identity {
