@@ -1,12 +1,25 @@
 resource "azurerm_cognitive_account" "ai_foundry" {
-  name                = var.ai_hub_name
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  kind                = "OpenAI"
-  sku_name            = var.sku_name
+  name                          = var.ai_hub_name
+  location                      = var.location
+  resource_group_name           = var.resource_group_name
+  kind                          = "OpenAI"
+  sku_name                      = var.sku_name
+  custom_subdomain_name         = var.ai_hub_name
+  public_network_access_enabled = true
+
+  # Network ACLs: Allow all for MVP (managed identity token exchange requires accessible endpoint)
+  # Note: Container Apps Consumption plan uses dynamic outbound IPs
+  # For production, consider Private Endpoints with VNet integration
+  network_acls {
+    default_action = "Allow"
+  }
 
   identity {
     type = "SystemAssigned"
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 
   tags = var.tags
