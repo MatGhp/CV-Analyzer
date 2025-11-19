@@ -1,5 +1,5 @@
 # Azure Container Apps - Simple Module
-# Creates Container Apps Environment + 3 Apps (Frontend, API, AI Service)
+# Creates Container Apps Environment + 2 Apps (Frontend, API)
 
 # Container Apps Environment
 resource "azurerm_container_app_environment" "env" {
