@@ -49,6 +49,12 @@ variable "frontend_image" {
   default     = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
 }
 
+variable "enable_health_probes" {
+  description = "Enable health probes (disable for initial deployment with placeholder images)"
+  type        = bool
+  default     = false  # Default to false to avoid ActivationFailed with placeholder images
+}
+
 variable "api_image" {
   description = "API container image (e.g., acr.azurecr.io/api:latest)"
   type        = string
