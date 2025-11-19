@@ -1,5 +1,46 @@
-# CV Analyzer - Docker Build & Deploy Script
-# PowerShell script for building and deploying the CV Analyzer platform
+<#
+.SYNOPSIS
+    CV Analyzer - Docker management script for local development and testing.
+
+.DESCRIPTION
+    Manages Docker containers for the CV Analyzer platform (Frontend, Backend, SQL Server).
+    Supports building images, starting/stopping services, and viewing logs.
+
+.PARAMETER Environment
+    Target environment: 'dev' (default) or 'prod'. Selects the appropriate docker-compose file.
+
+.PARAMETER Build
+    Build all Docker images without starting services.
+
+.PARAMETER Up
+    Start all services in detached mode (background).
+
+.PARAMETER Down
+    Stop and remove all running services.
+
+.PARAMETER Logs
+    Display real-time logs from all services (Ctrl+C to exit).
+
+.EXAMPLE
+    .\docker-manage.ps1 -Build
+    Builds all Docker images.
+
+.EXAMPLE
+    .\docker-manage.ps1 -Build -Up
+    Builds images and starts all services.
+
+.EXAMPLE
+    .\docker-manage.ps1 -Up
+    Starts services using existing images.
+
+.EXAMPLE
+    .\docker-manage.ps1 -Logs
+    Displays real-time logs from all running services.
+
+.EXAMPLE
+    .\docker-manage.ps1 -Environment prod -Up
+    Starts services using production docker-compose configuration.
+#>
 
 param(
     [Parameter(Mandatory=$false)]
@@ -82,11 +123,5 @@ if ($Logs) {
 }
 
 if (-not ($Build -or $Up -or $Down -or $Logs)) {
-    Write-Host "Usage:" -ForegroundColor Yellow
-    Write-Host "  .\docker-manage.ps1 -Build           # Build all containers" -ForegroundColor White
-    Write-Host "  .\docker-manage.ps1 -Up              # Start all services" -ForegroundColor White
-    Write-Host "  .\docker-manage.ps1 -Down            # Stop all services" -ForegroundColor White
-    Write-Host "  .\docker-manage.ps1 -Logs            # View logs" -ForegroundColor White
-    Write-Host "  .\docker-manage.ps1 -Build -Up       # Build and start" -ForegroundColor White
-    Write-Host "  .\docker-manage.ps1 -Environment prod -Up  # Use production config" -ForegroundColor White
+    Get-Help $MyInvocation.MyCommand.Path -Detailed
 }
