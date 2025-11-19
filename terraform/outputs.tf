@@ -38,4 +38,3 @@ output "api_name" {
   value       = module.container_apps.api_name
 }
 
-

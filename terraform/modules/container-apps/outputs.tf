@@ -39,4 +39,3 @@ output "api_name" {
   description = "API Container App name"
   value       = azurerm_container_app.api.name
 }
-

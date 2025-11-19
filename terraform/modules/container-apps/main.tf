@@ -58,17 +58,22 @@ resource "azurerm_container_app" "frontend" {
       # Liveness probe - detects and restarts failed containers
       # Checks /health endpoint to ensure nginx is responding
       liveness_probe {
-        transport = "HTTP"
-        port      = 80
-        path      = "/health"
+        transport        = "HTTP"
+        port             = 80
+        path             = "/health"
+        interval_seconds = 10
+        timeout          = 3
       }
 
       # Readiness probe - ensures only healthy containers receive traffic
       # Critical for preventing 502/503 errors during deployment
       readiness_probe {
-        transport = "HTTP"
-        port      = 80
-        path      = "/health"
+        transport        = "HTTP"
+        port             = 80
+        path             = "/health"
+        interval_seconds = 5
+        timeout          = 3
+        initial_delay    = 3
       }
     }
   }
