@@ -36,6 +36,33 @@
 
 ---
 
+
+## 📝 Commit Message Guidelines
+
+**Format**: Keep commits concise and focused on single changes.
+
+### Rules:
+- ✅ **Keep subject line short**: Max 72 characters
+- ✅ **Use conventional commits**: 	ype(scope): description
+- ✅ **Single purpose**: One logical change per commit
+- ❌ **Avoid long explanations**: No multi-paragraph commit messages
+
+### Examples:
+`
+✅ GOOD:
+fix: terraform plan file save for main branch
+feat: add auto-cancellation to workflows
+refactor: move secrets to root main.tf
+
+❌ TOO LONG:
+fix(terraform): save plan file for apply step on main branch
+
+- Terraform Apply was failing with 'tfplan: no such file or directory'
+- Root cause: Plan step didn't save output file when running on push/main
+- Solution: Add -out=tfplan flag when event is push (main deployment)
+`
+
+**Purpose**: Shorter commits = faster code review + cleaner git history.
 ## 🚨 Commit Behavior - Terraform Validation Policy
 
 **CRITICAL RULE**: Before preparing or suggesting ANY commit that includes Terraform changes, you MUST verify that all Terraform validation steps were executed successfully:
