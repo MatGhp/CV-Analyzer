@@ -77,32 +77,39 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-// Apply database migrations automatically
-using (var scope = app.Services.CreateScope())
+// Apply database migrations automatically (skip in test environment)
+if (!builder.Environment.IsEnvironment("Testing"))
 {
-    try
+    using (var scope = app.Services.CreateScope())
     {
-        var dbContext = scope.ServiceProvider.GetRequiredService<CVAnalyzer.Infrastructure.Persistence.ApplicationDbContext>();
-        Log.Information("Checking for pending database migrations...");
-        
-        var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
-        if (pendingMigrations.Any())
+        try
         {
-            Log.Information("Applying {Count} pending migration(s): {Migrations}", 
-                pendingMigrations.Count(), string.Join(", ", pendingMigrations));
-            await dbContext.Database.MigrateAsync();
-            Log.Information("Database migrations applied successfully");
+            var dbContext = scope.ServiceProvider.GetRequiredService<CVAnalyzer.Infrastructure.Persistence.ApplicationDbContext>();
+            Log.Information("Checking for pending database migrations...");
+            
+            var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
+            if (pendingMigrations.Any())
+            {
+                Log.Information("Applying {Count} pending migration(s): {Migrations}", 
+                    pendingMigrations.Count(), string.Join(", ", pendingMigrations));
+                await dbContext.Database.MigrateAsync();
+                Log.Information("Database migrations applied successfully");
+            }
+            else
+            {
+                Log.Information("Database is up to date. No migrations needed.");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            Log.Information("Database is up to date. No migrations needed.");
+            Log.Error(ex, "Failed to apply database migrations. Application may not function correctly.");
+            throw; // Fail startup if migrations fail
         }
     }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "Failed to apply database migrations. Application may not function correctly.");
-        throw; // Fail startup if migrations fail
-    }
+}
+else
+{
+    Log.Information("Skipping database migrations in Testing environment");
 }
 
 // Initialize Azure Storage Queues if configured

@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
@@ -10,7 +11,10 @@ public class HealthControllerTests : IClassFixture<WebApplicationFactory<Program
 
     public HealthControllerTests(WebApplicationFactory<Program> factory)
     {
-        _factory = factory;
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Testing");
+        });
     }
 
     [Fact]
