@@ -17,6 +17,7 @@ RUN npm run build -- --configuration=production
 
 # Stage 2: Serve with nginx
 FROM nginx:1.25-alpine
+RUN apk add --no-cache gettext
 
 # Copy nginx configuration template (will be processed by entrypoint script)
 COPY nginx.conf.template /etc/nginx/nginx.conf.template

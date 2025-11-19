@@ -3,12 +3,15 @@ set -e
 
 # Verify API_FQDN is set before proceeding
 if [ -z "$API_FQDN" ]; then
-    echo "ERROR: API_FQDN environment variable is not set"
+    echo "ERROR: API_FQDN environment variable is not set."
+    echo "This variable should be automatically injected by Azure Container Apps from Terraform configuration."
+    echo "Check: terraform/modules/container-apps/main.tf (env block) for correct definition."
+    echo "If missing, verify your Terraform deployment and CI/CD pipeline are passing the correct value."
     exit 1
 fi
 
-# Validate FQDN format (alphanumeric, dots, hyphens only)
-if ! echo "$API_FQDN" | grep -qE '^[a-zA-Z0-9][a-zA-Z0-9.-]*[a-zA-Z0-9]$'; then
+# Validate FQDN format (DNS-compliant: labels 1-63 chars, alphanumeric, hyphens only in middle, no consecutive dots)
+if ! echo "$API_FQDN" | grep -qE '^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$'; then
     echo "ERROR: Invalid API_FQDN format: $API_FQDN"
     exit 1
 fi

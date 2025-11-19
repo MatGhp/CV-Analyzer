@@ -46,6 +46,8 @@ resource "azurerm_container_app" "frontend" {
   # Lifecycle: Ignore only image and revision changes after initial creation
   # CI/CD pipeline (app-deploy.yml) manages container image updates
   # Allows Terraform to update other template properties (env vars, resources, etc.)
+  # Note: Changes to env vars (e.g., API_FQDN) will trigger new revisions by Terraform.
+  # This is intentional - infrastructure changes (API recreation) should propagate to frontend.
   lifecycle {
     ignore_changes = [
       template[0].container[0].image,
