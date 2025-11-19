@@ -1144,28 +1144,38 @@ According to Azure best practices, every container app should define:
 ```hcl
 # Frontend Container App
 liveness_probe {
-  transport = "HTTP"
-  port      = 80
-  path      = "/health"
+  transport        = "HTTP"
+  port             = 80
+  path             = "/health"
+  interval_seconds = 10
+  timeout          = 3
 }
 
 readiness_probe {
-  transport = "HTTP"
-  port      = 80
-  path      = "/health"
+  transport        = "HTTP"
+  port             = 80
+  path             = "/health"
+  interval_seconds = 5
+  timeout          = 3
+  initial_delay    = 3
 }
 
 # Backend API Container App
 liveness_probe {
-  transport = "HTTP"
-  port      = 8080
-  path      = "/health"
+  transport        = "HTTP"
+  port             = 8080
+  path             = "/health"
+  interval_seconds = 10
+  timeout          = 3
 }
 
 readiness_probe {
-  transport = "HTTP"
-  port      = 8080
-  path      = "/health"
+  transport        = "HTTP"
+  port             = 8080
+  path             = "/health"
+  interval_seconds = 5
+  timeout          = 3
+  initial_delay    = 3
 }
 ```
 
