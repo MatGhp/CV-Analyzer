@@ -12,7 +12,6 @@ resource "azurerm_cognitive_account" "ai_foundry" {
   # For production, consider Private Endpoints with VNet integration
   network_acls {
     default_action = "Allow"
-    bypass         = ["AzureServices"]
   }
 
   identity {
