@@ -1,5 +1,15 @@
 # Azure Container Apps - Simple Module
 # Creates Container Apps Environment + 2 Apps (Frontend, API)
+#
+# Health Probe Bootstrap Pattern:
+# 1. Initial Terraform deployment uses placeholder images (mcr.microsoft.com/azuredocs/containerapps-helloworld)
+#    that do NOT implement /health endpoints. Health probes must be disabled (enable_health_probes=false)
+#    during this phase to avoid ActivationFailed errors.
+# 2. After Terraform creates infrastructure, CI/CD (GitHub Actions) deploys real container images
+#    that DO implement /health endpoints.
+# 3. Operators should then enable health probes (enable_health_probes=true) in environment tfvars
+#    and re-run Terraform to activate health monitoring per Azure best practices.
+# 4. Production environments default to health probes enabled; dev/test default to disabled for bootstrap.
 
 # Container Apps Environment
 resource "azurerm_container_app_environment" "env" {

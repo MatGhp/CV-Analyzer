@@ -110,7 +110,7 @@ variable "max_replicas" {
 variable "enable_health_probes" {
   description = "Enable health probes for Container Apps. IMPORTANT: Should be true for production per Azure best practices. Set to false only during initial bootstrap deployment to avoid ActivationFailed with placeholder images."
   type        = bool
-  default     = null # Will use environment-specific default in locals
+  default     = null # Will use environment-specific default in local variable (see main.tf)
 }
 
 variable "sql_firewall_rules" {

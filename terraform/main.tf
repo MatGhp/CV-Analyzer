@@ -5,8 +5,12 @@ locals {
     Application = "cvanalyzer"
   }
   
-  # Health probes: false for dev/test initial deployment, true for prod (Azure best practice)
-  # Operators should set enable_health_probes=true in tfvars after first successful deployment
+  # Health probes: Bootstrap Exception to Azure Best Practices
+  # - Production: ALWAYS enabled (true) per Azure guidelines
+  # - Dev/Test: Disabled (false) ONLY during initial Terraform deployment with placeholder images
+  # - After CI/CD deploys real images, operators MUST set enable_health_probes=true in environment tfvars
+  # - This two-stage approach solves the chicken-and-egg: Terraform creates containers with placeholder
+  #   images that lack /health endpoints, causing ActivationFailed if probes are enabled
   enable_health_probes = var.enable_health_probes != null ? var.enable_health_probes : (var.environment == "prod" ? true : false)
 }
 
