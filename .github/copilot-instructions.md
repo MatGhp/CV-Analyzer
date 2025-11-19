@@ -32,8 +32,8 @@
 - Run tests: `cd backend && dotnet test` (backend), `cd frontend && npm test` (frontend)
 
 **Critical Gotchas (NOT obvious from code inspection):**
-1. **nginx.conf has hardcoded production FQDN** — NOT using Container Apps internal DNS (see section below)
-2. **Terraform lifecycle ignores** — Changes to container images are ignored (CI/CD manages deployments)
+1. **Dynamic nginx FQDN injection** — API endpoint configured at container startup via `docker-entrypoint.sh` + `envsubst` from `API_FQDN` env var (NOT hardcoded)
+2. **Terraform lifecycle ignores** — Changes to container images are ignored (CI/CD manages deployments), but env var changes trigger new revisions
 3. **FluentValidation runs automatically** — No manual validation needed in handlers (ValidationBehavior pipeline)
 4. **DefaultAzureCredential only** — No API keys supported; must use managed identity or `az login`
 5. **Background processing** — Resume analysis is async (queue + worker), not synchronous API call
@@ -1200,37 +1200,57 @@ readiness_probe {
 
 ### Container Apps Network Configuration
 
-**⚠️ CRITICAL: Current implementation uses EXTERNAL routing, NOT internal DNS.**
+**⚠️ DYNAMIC FQDN INJECTION: Same Docker image works across ALL environments.**
 
-**Reality Check** (`frontend/nginx.conf`):
+**Implementation** (`frontend/nginx.conf.template` + `docker-entrypoint.sh`):
 ```nginx
+# Template placeholder (replaced at container startup)
 location /api/ {
-    proxy_pass https://ca-cvanalyzer-api.wittystone-424eb7de.swedencentral.azurecontainerapps.io/api/;
+    proxy_pass https://${API_FQDN}/api/;
     proxy_ssl_server_name on;
-    # Uses HTTPS to public Container Apps FQDN
+    # API_FQDN injected by envsubst from Container Apps env var
 }
 ```
+
+**How It Works:**
+1. **Build time**: Dockerfile copies `nginx.conf.template` (with `${API_FQDN}` placeholder)
+2. **Container startup**: `docker-entrypoint.sh` runs before nginx
+3. **Variable injection**: `envsubst '${API_FQDN}' < nginx.conf.template > nginx.conf`
+4. **Environment variable**: Terraform sets `API_FQDN = azurerm_container_app.api.ingress[0].fqdn`
+5. **Validation**: Script validates FQDN format, tests API connectivity, validates nginx syntax
 
 **Why External Routing?**
 - nginx requires DNS resolution at startup time
 - Container Apps internal DNS (`http://ca-cvanalyzer-api:8080`) doesn't resolve in nginx container
-- Workaround: Use public FQDN with HTTPS (still within Azure network, minimal latency)
+- Solution: Use public FQDN with HTTPS (still within Azure network, minimal latency)
 
-**Implications:**
-- ❌ nginx.conf is **environment-specific** (hardcoded FQDN per environment)
-- ❌ Same Docker image **does NOT** work across dev/test/prod without rebuild
-- ✅ Traffic still secure (HTTPS + Azure backbone)
-- ✅ No performance penalty (Azure internal routing)
+**Benefits:**
+- ✅ **Single Docker image** works across dev/test/prod environments
+- ✅ **Automatic updates** when backend app name/region changes (Terraform manages env var)
+- ✅ **Traffic still secure** (HTTPS + Azure backbone)
+- ✅ **No performance penalty** (Azure internal routing)
+- ✅ **Validation at startup** prevents misconfiguration
 
-**Future Improvement Options:**
-1. **Templating**: Use `envsubst` to inject FQDN at container startup from env vars
-2. **Service Mesh**: Azure Service Mesh (when GA) for true internal routing
-3. **API Gateway**: Azure API Management or Application Gateway as reverse proxy
+**Terraform Integration** (`terraform/modules/container-apps/main.tf`):
+```terraform
+env {
+  name  = "API_FQDN"
+  value = azurerm_container_app.api.ingress[0].fqdn
+}
 
-**When to Update nginx.conf:**
-- Deploying to new environment (must update FQDN)
-- Backend app name changes
-- Container Apps Environment region changes
+lifecycle {
+  ignore_changes = [
+    template[0].container[0].image,    # CI/CD updates images
+    template[0].revision_suffix        # Preserve revision history
+  ]
+  # Note: env var changes (like API_FQDN) intentionally trigger new revisions
+}
+```
+
+**When to Modify:**
+- **docker-entrypoint.sh**: Change validation logic, add health checks, modify error handling
+- **nginx.conf.template**: Add new proxy locations, update nginx settings, add security headers
+- **Terraform env block**: Add new environment variables, change FQDN source
 
 ### CI/CD Pipeline (GitHub Actions)
 
@@ -1240,10 +1260,31 @@ location /api/ {
 - Uses GitHub Secrets for Azure credentials
 
 **Deployment flow:**
-1. Build Docker images (frontend + backend)
-2. Push to Azure Container Registry (ACR)
-3. Update Container Apps with new image tags
-4. Container Apps pull images via managed identity (no registry password)
+1. Build Docker images (frontend + backend in parallel)
+2. Push to Azure Container Registry (both `:$SHA` and `:latest` tags)
+3. Update Container Apps with SHA-tagged images
+4. Wait for revisions to reach "Running" state (up to 20 minutes)
+5. Verify health endpoints (3 retries with 10s delay)
+6. Container Apps pull images via managed identity (no registry password)
+
+**Health Check Pattern** (`app-deploy.yml`):
+```bash
+# ✅ CORRECT: Check HTTP status only, discard response body
+if curl -sf "https://$API_URL/api/health" > /dev/null; then
+  API_HEALTH="OK"
+else
+  API_HEALTH="FAIL"
+fi
+
+# ❌ WRONG: Don't capture response body (breaks string comparison)
+# API_HEALTH=$(curl -sf "https://$API_URL/api/health" && echo "OK" || echo "FAIL")
+# Result: API_HEALTH='{"status":"Healthy"}OK' != 'OK' → false negative
+```
+
+**Common Pitfalls:**
+- **Timing**: Revisions may be "Running" but apps not ready (DI initialization, DB connections). Add 15s delay after "Running" state before health checks.
+- **Retries**: Network blips happen. Always retry health checks (3× recommended).
+- **Logs**: When health checks fail but logs show 200 responses, check your curl logic (likely capturing body incorrectly).
 
 **Required GitHub Secrets:**
 - `AZURE_CREDENTIALS` - Service principal JSON
