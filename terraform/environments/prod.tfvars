@@ -13,9 +13,9 @@ sql_database_sku   = "S1"           # S1 SKU for production (better performance)
 acr_sku = "Standard" # Standard SKU for better performance and geo-replication in prod
 
 # Container Apps Configuration
-min_replicas = 1  # Always-on for production
-max_replicas = 10 # Higher capacity for production load
-enable_health_probes = true  # REQUIRED for production per Azure best practices
+min_replicas         = 1    # Always-on for production
+max_replicas         = 10   # Higher capacity for production load
+enable_health_probes = true # REQUIRED for production per Azure best practices
 
 # AI Configuration
 model_deployment_name = "gpt-4o"
