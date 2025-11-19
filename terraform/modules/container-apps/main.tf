@@ -246,7 +246,7 @@ resource "azurerm_container_app" "api" {
   ingress {
     target_port                = 8080
     external_enabled           = true
-    allow_insecure_connections = false  # Enforce HTTPS
+    allow_insecure_connections = false # Enforce HTTPS
     traffic_weight {
       latest_revision = true
       percentage      = 100

@@ -118,7 +118,7 @@ module "document_intelligence" {
 module "container_apps" {
   source              = "./modules/container-apps"
   environment_name    = "cae-cvanalyzer-${var.environment}"
-  app_name_prefix     = "ca-cvanalyzer"
+  app_name_prefix     = "ca-cvanalyzer-${var.environment}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   environment         = var.environment
@@ -159,7 +159,7 @@ resource "azurerm_role_assignment" "terraform_keyvault" {
 # Wait for RBAC permissions to propagate (Azure RBAC can take up to 2 minutes)
 resource "time_sleep" "wait_for_rbac" {
   create_duration = "120s"
-  
+
   depends_on = [azurerm_role_assignment.terraform_keyvault]
 }
 

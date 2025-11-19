@@ -82,12 +82,12 @@ jobs:
       run: |
         # Update both apps in parallel
         az containerapp update \
-          --name ca-cvanalyzer-api \
+          --name ca-cvanalyzer-api-${{ env.ENVIRONMENT }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --image ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-api:${{ github.sha }} &
         
         az containerapp update \
-          --name ca-cvanalyzer-frontend \
+          --name ca-cvanalyzer-frontend-${{ env.ENVIRONMENT }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --image ${{ env.ACR_NAME }}.azurecr.io/cvanalyzer-frontend:${{ github.sha }} &
         
@@ -97,18 +97,18 @@ jobs:
       run: |
         echo "Waiting for Container Apps revision provisioning (can take up to 20 minutes)..."
         
-        API_URL=$(az containerapp show --name ca-cvanalyzer-api --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
-        FRONTEND_URL=$(az containerapp show --name ca-cvanalyzer-frontend --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+        API_URL=$(az containerapp show --name ca-cvanalyzer-api-${{ env.ENVIRONMENT }} --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+        FRONTEND_URL=$(az containerapp show --name ca-cvanalyzer-frontend-${{ env.ENVIRONMENT }} --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
         
         # Wait for revisions to reach Running state (up to 20 minutes)
         MAX_ATTEMPTS=40  # 40 × 30s = 20 minutes
         
         for i in $(seq 1 $MAX_ATTEMPTS); do
-          API_REVISION=$(az containerapp show --name ca-cvanalyzer-api --resource-group ${{ env.RESOURCE_GROUP }} --query properties.latestRevisionName -o tsv)
-          FRONTEND_REVISION=$(az containerapp show --name ca-cvanalyzer-frontend --resource-group ${{ env.RESOURCE_GROUP }} --query properties.latestRevisionName -o tsv)
+          API_REVISION=$(az containerapp show --name ca-cvanalyzer-api-${{ env.ENVIRONMENT }} --resource-group ${{ env.RESOURCE_GROUP }} --query properties.latestRevisionName -o tsv)
+          FRONTEND_REVISION=$(az containerapp show --name ca-cvanalyzer-frontend-${{ env.ENVIRONMENT }} --resource-group ${{ env.RESOURCE_GROUP }} --query properties.latestRevisionName -o tsv)
           
-          API_STATUS=$(az containerapp revision show --name ca-cvanalyzer-api --resource-group ${{ env.RESOURCE_GROUP }} --revision "$API_REVISION" --query properties.runningState -o tsv 2>/dev/null || echo "Unknown")
-          FRONTEND_STATUS=$(az containerapp revision show --name ca-cvanalyzer-frontend --resource-group ${{ env.RESOURCE_GROUP }} --revision "$FRONTEND_REVISION" --query properties.runningState -o tsv 2>/dev/null || echo "Unknown")
+          API_STATUS=$(az containerapp revision show --name ca-cvanalyzer-api-${{ env.ENVIRONMENT }} --resource-group ${{ env.RESOURCE_GROUP }} --revision "$API_REVISION" --query properties.runningState -o tsv 2>/dev/null || echo "Unknown")
+          FRONTEND_STATUS=$(az containerapp revision show --name ca-cvanalyzer-frontend-${{ env.ENVIRONMENT }} --resource-group ${{ env.RESOURCE_GROUP }} --revision "$FRONTEND_REVISION" --query properties.runningState -o tsv 2>/dev/null || echo "Unknown")
           
           echo "[$i/$MAX_ATTEMPTS] API: $API_STATUS | Frontend: $FRONTEND_STATUS"
           
@@ -137,13 +137,13 @@ jobs:
             
             echo "=== API Logs ==="
             az containerapp logs show \
-              --name ca-cvanalyzer-api \
+              --name ca-cvanalyzer-api-${{ env.ENVIRONMENT }} \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --tail 50 || echo "Could not fetch API logs"
             
             echo "=== Frontend Logs ==="
             az containerapp logs show \
-              --name ca-cvanalyzer-frontend \
+              --name ca-cvanalyzer-frontend-${{ env.ENVIRONMENT }} \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --tail 50 || echo "Could not fetch Frontend logs"
             
