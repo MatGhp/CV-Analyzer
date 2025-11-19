@@ -6,6 +6,53 @@
 
 ---
 
+## 🚀 30-Second Orientation for AI Agents
+
+**What is this?** AI-powered resume optimization platform (Angular 20 + .NET 10 + Azure OpenAI GPT-4o).
+
+**Architecture**: Frontend (nginx) → Backend API (CQRS/Clean Architecture) → Azure Storage Queue → Background Worker → Document Intelligence + Azure OpenAI → Results saved to SQL.
+
+**Key Stack:**
+- Frontend: Angular 20 (zoneless, signals, standalone components)
+- Backend: .NET 10 (MediatR CQRS, FluentValidation, EF Core)
+- AI: Azure.AI.OpenAI SDK (GPT-4o function calling)
+- Infrastructure: Azure Container Apps, SQL Database, Storage (blobs + queues)
+- Deployment: Terraform IaC, GitHub Actions CI/CD
+
+**Critical Files to Read First:**
+1. `docs/SECURITY.md` — Security rules (REQUIRED before any code changes)
+2. `docs/ARCHITECTURE.md` — System design and data flows
+3. `backend/src/CVAnalyzer.API/Program.cs` — Backend startup and DI registration
+4. `frontend/src/app/app.config.ts` — Frontend configuration
+
+**Most Common Tasks:**
+- Add CQRS feature: `backend/src/CVAnalyzer.Application/Features/<Feature>/Commands|Queries/`
+- Add Angular component: `ng generate component features/my-feature --standalone`
+- Run full stack locally: `docker-compose up -d` (ports: frontend 4200, API 5000, SQL 1433)
+- Run tests: `cd backend && dotnet test` (backend), `cd frontend && npm test` (frontend)
+
+**Critical Gotchas (NOT obvious from code inspection):**
+1. **nginx.conf has hardcoded production FQDN** — NOT using Container Apps internal DNS (see section below)
+2. **Terraform lifecycle ignores** — Changes to container images are ignored (CI/CD manages deployments)
+3. **FluentValidation runs automatically** — No manual validation needed in handlers (ValidationBehavior pipeline)
+4. **DefaultAzureCredential only** — No API keys supported; must use managed identity or `az login`
+5. **Background processing** — Resume analysis is async (queue + worker), not synchronous API call
+
+**Quick Command Reference:**
+| Task | Command | Location |
+|------|---------|----------|
+| Start full stack | `docker-compose up -d` | Repository root |
+| Backend tests | `dotnet test` | `backend/` |
+| Frontend tests | `npm test` | `frontend/` |
+| Run backend locally | `dotnet run` | `backend/src/CVAnalyzer.API/` |
+| Run frontend dev | `npm start` | `frontend/` (proxy to localhost:5000) |
+| Add EF migration | `dotnet ef migrations add <Name> --project src/CVAnalyzer.Infrastructure --startup-project src/CVAnalyzer.API` | `backend/` |
+| Apply migrations | `dotnet ef database update --project src/CVAnalyzer.Infrastructure --startup-project src/CVAnalyzer.API` | `backend/` |
+| Terraform plan | `terraform plan -var-file="environments/dev.tfvars"` | `terraform/` |
+| Check git hooks | `cat .git/hooks/pre-commit` | Repository root |
+
+---
+
 ## 🔒 Branch Protection - Main Branch Policy
 
 **CRITICAL RULE**: Direct pushes to `main` branch are **BLOCKED** by branch protection rules.
@@ -1084,31 +1131,39 @@ lifecycle {
 
 Why: Terraform creates placeholder containers; GitHub Actions app-deploy.yml deploys real images. This prevents Terraform from reverting CI/CD updates.
 
-### Container Apps Internal DNS Pattern
+### Container Apps Network Configuration
 
-**Critical deployment pattern**: Apps in the same Container Apps Environment communicate via internal DNS using just the app name:
+**⚠️ CRITICAL: Current implementation uses EXTERNAL routing, NOT internal DNS.**
 
-**nginx.conf** (static, no environment variables):
+**Reality Check** (`frontend/nginx.conf`):
 ```nginx
 location /api/ {
-    proxy_pass http://ca-cvanalyzer-api:8080/api/;
+    proxy_pass https://ca-cvanalyzer-api.wittystone-424eb7de.swedencentral.azurecontainerapps.io/api/;
+    proxy_ssl_server_name on;
+    # Uses HTTPS to public Container Apps FQDN
 }
 ```
 
-**Resolution across environments:**
-| Environment | Frontend → API | Resolves To |
-|-------------|---------------|-------------|
-| Dev | `http://ca-cvanalyzer-api:8080` | Dev API instance |
-| Test | `http://ca-cvanalyzer-api:8080` | Test API instance |
-| Prod | `http://ca-cvanalyzer-api:8080` | Prod API instance |
+**Why External Routing?**
+- nginx requires DNS resolution at startup time
+- Container Apps internal DNS (`http://ca-cvanalyzer-api:8080`) doesn't resolve in nginx container
+- Workaround: Use public FQDN with HTTPS (still within Azure network, minimal latency)
 
-**Benefits:**
-- ✅ Same Docker image works in all environments (no config changes)
-- ✅ No environment variables or templating needed
-- ✅ Faster (internal network, no external routing)
-- ✅ Secure (traffic stays within Container Apps Environment)
+**Implications:**
+- ❌ nginx.conf is **environment-specific** (hardcoded FQDN per environment)
+- ❌ Same Docker image **does NOT** work across dev/test/prod without rebuild
+- ✅ Traffic still secure (HTTPS + Azure backbone)
+- ✅ No performance penalty (Azure internal routing)
 
-**When NOT to use**: Apps in different Container Apps Environments, different regions, or non-Container App backends (use env vars).
+**Future Improvement Options:**
+1. **Templating**: Use `envsubst` to inject FQDN at container startup from env vars
+2. **Service Mesh**: Azure Service Mesh (when GA) for true internal routing
+3. **API Gateway**: Azure API Management or Application Gateway as reverse proxy
+
+**When to Update nginx.conf:**
+- Deploying to new environment (must update FQDN)
+- Backend app name changes
+- Container Apps Environment region changes
 
 ### CI/CD Pipeline (GitHub Actions)
 
@@ -1247,7 +1302,7 @@ This monorepo contains two tightly integrated services:
 - Backend: CQRS with MediatR, automatic validation, strict architecture layers
 - AgentService: Azure OpenAI SDK, DefaultAzureCredential, structured JSON output
 - Background processing: Queue-based async analysis with Document Intelligence + AI (v2.0: Durable Agents)
-- Infrastructure: Modular Terraform, Container Apps internal DNS, lifecycle ignore for CI/CD
+- Infrastructure: Modular Terraform, Container Apps external HTTPS routing (nginx FQDN), lifecycle ignore for CI/CD
 - Observability: Serilog + Application Insights, health checks for Container Apps probes
 - Security: Pre-commit hooks, Key Vault for secrets, DefaultAzureCredential everywhere, input validation
 - All: Security-first (no secrets in code, input validation, error handling)
