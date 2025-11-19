@@ -118,8 +118,18 @@ jobs:
             
             # Health endpoint checks with 3 retries
             for j in 1 2 3; do
-              API_HEALTH=$(curl -sf "https://$API_URL/api/health" && echo "OK" || echo "FAIL")
-              FRONTEND_HEALTH=$(curl -sf "https://$FRONTEND_URL/health" && echo "OK" || echo "FAIL")
+              # Use curl exit code only (discard response body)
+              if curl -sf "https://$API_URL/api/health" > /dev/null; then
+                API_HEALTH="OK"
+              else
+                API_HEALTH="FAIL"
+              fi
+              
+              if curl -sf "https://$FRONTEND_URL/health" > /dev/null; then
+                FRONTEND_HEALTH="OK"
+              else
+                FRONTEND_HEALTH="FAIL"
+              fi
               
               if [ "$API_HEALTH" == "OK" ] && [ "$FRONTEND_HEALTH" == "OK" ]; then
                 echo "[PASS] All health checks passed"
