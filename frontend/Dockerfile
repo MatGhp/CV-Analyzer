@@ -18,8 +18,11 @@ RUN npm run build -- --configuration=production
 # Stage 2: Serve with nginx
 FROM nginx:1.25-alpine
 
-# Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+# Copy nginx configuration template (will be processed by entrypoint script)
+COPY nginx.conf.template /etc/nginx/nginx.conf.template
+
+# Copy startup script with execute permissions
+COPY --chmod=755 docker-entrypoint.sh /docker-entrypoint.sh
 
 # Copy built application from build stage
 COPY --from=build /app/dist/cv-analyzer-frontend/browser /usr/share/nginx/html
@@ -31,5 +34,5 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Use custom entrypoint that generates nginx.conf from template
+ENTRYPOINT ["/docker-entrypoint.sh"]

@@ -28,6 +28,9 @@ resource "azurerm_container_app" "frontend" {
   container_app_environment_id = azurerm_container_app_environment.env.id
   revision_mode                = "Single"
 
+  # Explicit dependency: Frontend needs API FQDN for nginx configuration
+  depends_on = [azurerm_container_app.api]
+
   identity {
     type = "SystemAssigned"
   }
@@ -63,6 +66,11 @@ resource "azurerm_container_app" "frontend" {
       env {
         name  = "NGINX_PORT"
         value = "80"
+      }
+
+      env {
+        name  = "API_FQDN"
+        value = azurerm_container_app.api.ingress[0].fqdn
       }
 
       # Liveness probe - detects and restarts failed containers
