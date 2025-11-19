@@ -37,4 +37,3 @@ output "api_name" {
   description = "API Container App name"
   value       = module.container_apps.api_name
 }
-
