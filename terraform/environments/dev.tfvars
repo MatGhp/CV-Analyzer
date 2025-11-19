@@ -18,6 +18,8 @@ acr_sku = "Basic" # Basic SKU for dev environment
 # Container Apps Configuration
 min_replicas = 0 # Enable scale-to-zero for cost savings in dev
 max_replicas = 3 # Lower max for dev environment
+# Health probes: Set to false for initial bootstrap, then set to true after first deployment
+# enable_health_probes = false  # Uncomment only for initial deployment to avoid ActivationFailed
 
 # AI Configuration
 model_deployment_name = "gpt-4o"

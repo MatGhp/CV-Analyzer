@@ -50,9 +50,8 @@ variable "frontend_image" {
 }
 
 variable "enable_health_probes" {
-  description = "Enable health probes (disable for initial deployment with placeholder images)"
+  description = "Enable health probes (REQUIRED for production per Azure best practices)"
   type        = bool
-  default     = false  # Default to false to avoid ActivationFailed with placeholder images
 }
 
 variable "api_image" {

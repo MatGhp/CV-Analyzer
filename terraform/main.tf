@@ -4,6 +4,10 @@ locals {
     Environment = var.environment
     Application = "cvanalyzer"
   }
+  
+  # Health probes: false for dev/test initial deployment, true for prod (Azure best practice)
+  # Operators should set enable_health_probes=true in tfvars after first successful deployment
+  enable_health_probes = var.enable_health_probes != null ? var.enable_health_probes : (var.environment == "prod" ? true : false)
 }
 
 # Resource Group
@@ -141,6 +145,7 @@ module "container_apps" {
   log_analytics_workspace_id       = azurerm_log_analytics_workspace.main.id
   min_replicas                     = var.min_replicas
   max_replicas                     = var.max_replicas
+  enable_health_probes             = local.enable_health_probes
 
   tags = local.common_tags
 }

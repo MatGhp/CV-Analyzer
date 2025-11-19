@@ -15,6 +15,7 @@ acr_sku = "Standard" # Standard SKU for better performance and geo-replication i
 # Container Apps Configuration
 min_replicas = 1  # Always-on for production
 max_replicas = 10 # Higher capacity for production load
+enable_health_probes = true  # REQUIRED for production per Azure best practices
 
 # AI Configuration
 model_deployment_name = "gpt-4o"
