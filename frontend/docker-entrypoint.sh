@@ -11,7 +11,7 @@ if [ -z "$API_FQDN" ]; then
 fi
 
 # Validate FQDN format (DNS-compliant: labels 1-63 chars, alphanumeric, hyphens only in middle, no consecutive dots)
-if ! echo "$API_FQDN" | grep -qE '^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$'; then
+if ! echo "$API_FQDN" | grep -qE '^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$'; then
     echo "ERROR: Invalid API_FQDN format: $API_FQDN"
     exit 1
 fi
@@ -32,7 +32,11 @@ nginx -t || {
 echo "=== Frontend Container Startup ==="
 echo "API_FQDN: $API_FQDN"
 echo "Testing API connectivity..."
-wget --spider --timeout=5 "https://$API_FQDN/api/health" 2>&1 || echo "WARNING: API health check failed at startup (may not be ready yet)"
+if ! wget --spider --timeout=5 "https://$API_FQDN/api/health" 2>&1 | tee /tmp/health-check.log; then
+    echo "WARNING: API health check failed at startup (may not be ready yet)"
+    echo "Error details:"
+    cat /tmp/health-check.log
+fi
 echo "nginx configuration validated successfully"
 echo "=================================="
 
