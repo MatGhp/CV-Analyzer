@@ -32,11 +32,12 @@
 - Run tests: `cd backend && dotnet test` (backend), `cd frontend && npm test` (frontend)
 
 **Critical Gotchas (NOT obvious from code inspection):**
-1. **Dynamic nginx FQDN injection** — API endpoint configured at container startup via `docker-entrypoint.sh` + `envsubst` from `API_FQDN` env var (NOT hardcoded)
-2. **Terraform lifecycle ignores** — Changes to container images are ignored (CI/CD manages deployments), but env var changes trigger new revisions
-3. **FluentValidation runs automatically** — No manual validation needed in handlers (ValidationBehavior pipeline)
-4. **DefaultAzureCredential only** — No API keys supported; must use managed identity or `az login`
-5. **Background processing** — Resume analysis is async (queue + worker), not synchronous API call
+1. **Automatic database migrations** — EF Core migrations apply automatically on startup (Program.cs); app fails if migrations fail; see `docs/DATABASE_MIGRATIONS.md`
+2. **Dynamic nginx FQDN injection** — API endpoint configured at container startup via `docker-entrypoint.sh` + `envsubst` from `API_FQDN` env var (NOT hardcoded)
+3. **Terraform lifecycle ignores** — Changes to container images are ignored (CI/CD manages deployments), but env var changes trigger new revisions
+4. **FluentValidation runs automatically** — No manual validation needed in handlers (ValidationBehavior pipeline)
+5. **DefaultAzureCredential only** — No API keys supported; must use managed identity or `az login`
+6. **Background processing** — Resume analysis is async (queue + worker), not synchronous API call
 
 **Quick Command Reference:**
 | Task | Command | Location |
@@ -1419,6 +1420,7 @@ This monorepo contains two tightly integrated services:
 - **Security**: `docs/SECURITY.md` (READ BEFORE ANY CODE CHANGES)
 - **Local setup**: `RUNNING_LOCALLY.md` (Azure resources) or `QUICKSTART.md` (Docker only)
 - **Architecture**: `docs/ARCHITECTURE.md` (system design, Clean Architecture, data flows)
+- **Database**: `docs/DATABASE_MIGRATIONS.md` (EF Core migrations, automatic vs manual, troubleshooting)
 - **DevOps**: `docs/DEVOPS.md` (deployment, troubleshooting, Container Apps patterns)
 - **Git workflow**: `docs/GIT_WORKFLOW.md` (branching, commits, rebasing)
 - **Terraform**: `docs/TERRAFORM.md` (IaC details, module usage)

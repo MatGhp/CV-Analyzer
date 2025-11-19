@@ -1,6 +1,7 @@
 using CVAnalyzer.API.Middleware;
 using CVAnalyzer.Application;
 using CVAnalyzer.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 
@@ -75,6 +76,34 @@ builder.Services.AddHealthChecks()
     .AddCheck<CVAnalyzer.Infrastructure.HealthChecks.KeyVaultHealthCheck>("key_vault");
 
 var app = builder.Build();
+
+// Apply database migrations automatically
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<CVAnalyzer.Infrastructure.Persistence.ApplicationDbContext>();
+        Log.Information("Checking for pending database migrations...");
+        
+        var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
+        if (pendingMigrations.Any())
+        {
+            Log.Information("Applying {Count} pending migration(s): {Migrations}", 
+                pendingMigrations.Count(), string.Join(", ", pendingMigrations));
+            await dbContext.Database.MigrateAsync();
+            Log.Information("Database migrations applied successfully");
+        }
+        else
+        {
+            Log.Information("Database is up to date. No migrations needed.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Failed to apply database migrations. Application may not function correctly.");
+        throw; // Fail startup if migrations fail
+    }
+}
 
 // Initialize Azure Storage Queues if configured
 using (var scope = app.Services.CreateScope())
