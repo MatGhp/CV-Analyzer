@@ -13,6 +13,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Resume> Resumes => Set<Resume>();
     public DbSet<Suggestion> Suggestions => Set<Suggestion>();
     public DbSet<CandidateInfo> CandidateInfos => Set<CandidateInfo>();
+    public DbSet<PromptTemplate> PromptTemplates => Set<PromptTemplate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,6 +43,51 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<Resume>(entity =>
         {
             entity.HasIndex(e => e.UserId);
+        });
+
+        modelBuilder.Entity<PromptTemplate>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.AgentType)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(e => e.TaskType)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(e => e.Environment)
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entity.Property(e => e.Name)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(e => e.Content)
+                .IsRequired();
+
+            entity.Property(e => e.Variables);
+
+            entity.Property(e => e.CreatedBy)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            // Unique constraint: One version per AgentType/TaskType/Environment/Version
+            entity.HasIndex(e => new { e.AgentType, e.TaskType, e.Environment, e.Version })
+                .IsUnique()
+                .HasDatabaseName("IX_PromptTemplates_AgentTask_Version");
+
+            // Performance index for active prompt lookups
+            entity.HasIndex(e => new { e.Environment, e.AgentType, e.TaskType, e.IsActive })
+                .HasFilter("[IsActive] = 1")
+                .HasDatabaseName("IX_PromptTemplates_Active_Lookup");
+
+            // Check constraint for valid environments
+            entity.HasCheckConstraint(
+                "CK_PromptTemplates_Environment",
+                "[Environment] IN ('Development', 'Test', 'Production')");
         });
 
         base.OnModelCreating(modelBuilder);

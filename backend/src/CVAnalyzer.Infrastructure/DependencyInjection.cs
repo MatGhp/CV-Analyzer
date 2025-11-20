@@ -29,6 +29,12 @@ public static class DependencyInjection
         ConfigureAzureStorage(services, configuration);
         ConfigureDocumentIntelligence(services, configuration);
         
+        // Memory cache for prompt templates
+        services.AddMemoryCache();
+        
+        // Prompt template repository
+        services.AddScoped<IPromptTemplateRepository, Persistence.Repositories.PromptTemplateRepository>();
+        
         services.AddScoped<IBlobStorageService, BlobStorageService>();
         services.AddScoped<IDocumentIntelligenceService, DocumentIntelligenceService>();
         services.AddScoped<IAIResumeAnalyzerService, AIResumeAnalyzerService>();
@@ -70,7 +76,8 @@ public static class DependencyInjection
             }
         });
 
-        services.AddSingleton<AgentService.ResumeAnalysisAgent>();
+        // Register ResumeAnalysisAgent as scoped to access scoped IPromptTemplateRepository
+        services.AddScoped<AgentService.ResumeAnalysisAgent>();
     }
 
     private static void ConfigureDatabase(IServiceCollection services, IConfiguration configuration)
