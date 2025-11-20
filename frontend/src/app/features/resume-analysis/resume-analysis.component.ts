@@ -84,6 +84,8 @@ export class ResumeAnalysisComponent implements OnInit {
   }
 
   private checkIfAnonymous(): void {
+    // Will be properly set when analysis data loads
+    // This is just initial state based on localStorage
     const userId = localStorage.getItem('cv-analyzer-session-id');
     this.isAnonymous.set(!!userId && userId.startsWith('guest-'));
   }
@@ -124,6 +126,8 @@ export class ResumeAnalysisComponent implements OnInit {
       .subscribe({
         next: (analysisData) => {
           this.analysis.set(analysisData);
+          // Set isAnonymous based on userId from API response (fixes security issue)
+          this.isAnonymous.set(analysisData.userId.startsWith('guest-'));
           this.isLoading.set(false);
         },
         error: (error) => {

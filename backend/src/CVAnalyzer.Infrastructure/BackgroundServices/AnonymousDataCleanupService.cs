@@ -55,49 +55,88 @@ public class AnonymousDataCleanupService : BackgroundService
         var blobStorage = scope.ServiceProvider.GetRequiredService<IBlobStorageService>();
 
         var cutoffDate = DateTime.UtcNow;
+        int totalCleaned = 0;
+        int totalFailed = 0;
+        const int batchSize = 100;
 
-        // Find expired anonymous resumes
-        var expiredResumes = await context.Resumes
-            .Where(r => r.IsAnonymous && r.AnonymousExpiresAt.HasValue && r.AnonymousExpiresAt.Value < cutoffDate)
-            .ToListAsync(cancellationToken);
-
-        if (expiredResumes.Count == 0)
+        while (true)
         {
-            _logger.LogInformation("No expired anonymous resumes to clean up");
-            return;
-        }
+            // Find up to batchSize expired anonymous resumes (batch processing for memory efficiency)
+            var expiredResumes = await context.Resumes
+                .Where(r => r.IsAnonymous && r.AnonymousExpiresAt.HasValue && r.AnonymousExpiresAt.Value < cutoffDate)
+                .Take(batchSize)
+                .ToListAsync(cancellationToken);
 
-        _logger.LogInformation("Found {Count} expired anonymous resumes to clean up", expiredResumes.Count);
+            if (expiredResumes.Count == 0)
+            {
+                if (totalCleaned == 0)
+                {
+                    _logger.LogInformation("No expired anonymous resumes to clean up");
+                }
+                break;
+            }
 
-        foreach (var resume in expiredResumes)
-        {
+            _logger.LogInformation("Processing batch of {Count} expired anonymous resumes", expiredResumes.Count);
+
+            int batchSuccessCount = 0;
+
+            foreach (var resume in expiredResumes)
+            {
+                try
+                {
+                    // Delete blob file first
+                    await blobStorage.DeleteFileAsync(resume.BlobUrl, cancellationToken);
+                    
+                    // Delete resume record (cascade deletes suggestions and candidate info)
+                    context.Resumes.Remove(resume);
+                    
+                    batchSuccessCount++;
+                    
+                    _logger.LogInformation(
+                        "Marked resume {ResumeId} for deletion (anonymous user {UserId})", 
+                        resume.Id, 
+                        resume.UserId);
+                }
+                catch (Exception ex)
+                {
+                    totalFailed++;
+                    _logger.LogError(
+                        ex, 
+                        "Failed to clean up resume {ResumeId} for anonymous user {UserId}", 
+                        resume.Id, 
+                        resume.UserId);
+                    
+                    // Don't remove from context if blob deletion failed (maintains consistency)
+                    if (context.Resumes.Local.Contains(resume))
+                    {
+                        context.Resumes.Attach(resume);
+                    }
+                }
+            }
+
+            // Save changes for this batch (transactional consistency)
             try
             {
-                // Delete blob file
-                await blobStorage.DeleteFileAsync(resume.BlobUrl, cancellationToken);
-                
-                // Delete resume record (cascade deletes suggestions and candidate info)
-                context.Resumes.Remove(resume);
+                await context.SaveChangesAsync(cancellationToken);
+                totalCleaned += batchSuccessCount;
                 
                 _logger.LogInformation(
-                    "Cleaned up expired resume {ResumeId} for anonymous user {UserId}", 
-                    resume.Id, 
-                    resume.UserId);
+                    "Batch cleanup completed. Successfully cleaned {SuccessCount} resumes in this batch",
+                    batchSuccessCount);
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex, 
-                    "Failed to clean up resume {ResumeId} for anonymous user {UserId}", 
-                    resume.Id, 
-                    resume.UserId);
+                _logger.LogError(ex, "Failed to save batch cleanup changes");
+                totalFailed += batchSuccessCount;
             }
         }
 
-        await context.SaveChangesAsync(cancellationToken);
-        
-        _logger.LogInformation(
-            "Anonymous data cleanup completed. Cleaned up {Count} resumes", 
-            expiredResumes.Count);
+        if (totalCleaned > 0 || totalFailed > 0)
+        {
+            _logger.LogInformation(
+                "Anonymous data cleanup completed. Total cleaned: {Cleaned}, Total failed: {Failed}",
+                totalCleaned,
+                totalFailed);
+        }
     }
 }

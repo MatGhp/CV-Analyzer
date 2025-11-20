@@ -79,7 +79,8 @@ export class ResumeUploadComponent {
     if (!userId) {
       // Generate session token matching backend format: guest-{timestamp}-{random12}
       const timestamp = Date.now();
-      const random12 = Math.random().toString(36).substring(2, 14).padEnd(12, '0');
+      // Use crypto.randomUUID for proper random generation (12 alphanumeric chars)
+      const random12 = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
       userId = `guest-${timestamp}-${random12}`;
       localStorage.setItem(storageKey, userId);
     }
