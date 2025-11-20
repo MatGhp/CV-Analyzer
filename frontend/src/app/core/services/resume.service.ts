@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, interval } from 'rxjs';
-import { switchMap, takeWhile, tap } from 'rxjs/operators';
+import { Observable, interval, timer } from 'rxjs';
+import { switchMap, takeWhile, tap, startWith } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   Resume,
@@ -74,13 +74,13 @@ export class ResumeService {
   }
 
   /**
-   * Polls resume status every 2 seconds until complete or failed.
+   * Polls resume status immediately, then every 2 seconds until complete or failed.
    * Emits final status before completing the observable.
    */
   pollResumeStatus(resumeId: string): Observable<ResumeStatusResponse> {
     this.isPolling.set(true);
 
-    return interval(2000).pipe(
+    return timer(0, 2000).pipe(
       switchMap(() => this.checkStatus(resumeId)),
       tap(status => {
         if (status.status === 'complete' || status.status === 'failed') {

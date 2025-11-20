@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "4200:80"
+    environment:
+      - API_FQDN=api.cvanalyzer.local
     depends_on:
       - api
     networks:
@@ -24,15 +26,22 @@ services:
       - "5000:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=CVAnalyzerDb;User Id=sa;Password=<PASSWORD_PLACEHOLDER>;TrustServerCertificate=True # Placeholder only; supply real value via secret
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=CVAnalyzerDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True
       - UseKeyVault=false
-      - Agent__Endpoint=${AI_FOUNDRY_ENDPOINT}
-      - Agent__Deployment=${MODEL_DEPLOYMENT_NAME:-gpt-4o}
+      # ========================================
+      # Local Development Credentials
+      # ========================================
+      # Create a .env file (gitignored) with your Azure credentials
+      # See LOCAL_DEV_SECRETS.md for Azure CLI commands to get values
+      # ========================================
+      - AzureStorage__ConnectionString=${AZURE_STORAGE_CONNECTION_STRING}
+      - Agent__Endpoint=https://ai-cvanalyzer-dev.openai.azure.com/
+      - Agent__Deployment=gpt-4o
+      - Agent__ApiKey=${AGENT_API_KEY}
       - Agent__Temperature=0.7
       - Agent__TopP=0.95
-      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
-      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
-      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+      - DocumentIntelligence__Endpoint=https://cvanalyzer-dev-docintel.cognitiveservices.azure.com/
+      - DocumentIntelligence__ApiKey=${DOCUMENT_INTELLIGENCE_API_KEY}
     depends_on:
       - sqlserver
     networks:
@@ -42,7 +51,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=<PASSWORD_PLACEHOLDER> # Placeholder only; override via secret/env var locally
+      - SA_PASSWORD=YourStrong@Passw0rd
     ports:
       - "1433:1433"
     volumes:

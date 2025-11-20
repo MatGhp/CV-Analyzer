@@ -1,0 +1,6 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.local
+    environment: []  # Remove API_FQDN requirement for local
