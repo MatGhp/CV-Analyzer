@@ -28,20 +28,38 @@ public class ResumeAnalysisWorker : BackgroundService
 
     public ResumeAnalysisWorker(
         IServiceProvider serviceProvider,
-        QueueServiceClient queueServiceClient,
+        QueueServiceClient? queueServiceClient,
         IOptions<QueueOptions> queueOptions,
         ILogger<ResumeAnalysisWorker> logger)
     {
         _serviceProvider = serviceProvider;
         _queueOptions = queueOptions.Value;
-        _queueClient = queueServiceClient.GetQueueClient(_queueOptions.ResumeAnalysisQueueName);
-        _poisonQueueClient = queueServiceClient.GetQueueClient(_queueOptions.PoisonQueueName);
         _logger = logger;
+        
+        // Handle null QueueServiceClient (e.g., in test environments)
+        if (queueServiceClient != null)
+        {
+            _queueClient = queueServiceClient.GetQueueClient(_queueOptions.ResumeAnalysisQueueName);
+            _poisonQueueClient = queueServiceClient.GetQueueClient(_queueOptions.PoisonQueueName);
+        }
+        else
+        {
+            _logger.LogWarning("QueueServiceClient not configured. ResumeAnalysisWorker will not process messages.");
+            _queueClient = null!;
+            _poisonQueueClient = null!;
+        }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("ResumeAnalysisWorker started");
+
+        // If queue client is not configured, exit early (test environment)
+        if (_queueClient == null)
+        {
+            _logger.LogInformation("ResumeAnalysisWorker exiting - no queue client configured");
+            return;
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
