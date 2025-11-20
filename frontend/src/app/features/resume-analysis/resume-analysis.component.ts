@@ -5,12 +5,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AnalysisResponse, SuggestionDto, ResumeStatusResponse } from '../../core/models/resume.model';
 import { ResumeService } from '../../core/services/resume.service';
 import { CandidateInfoCardComponent } from '../../shared/components/candidate-info-card/candidate-info-card.component';
+import { SaveResultsBannerComponent } from '../../shared/components/save-results-banner/save-results-banner.component';
 import { UI_TIMING, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../../core/constants/ui.constants';
 
 @Component({
   selector: 'app-resume-analysis',
   standalone: true,
-  imports: [CommonModule, CandidateInfoCardComponent],
+  imports: [CommonModule, CandidateInfoCardComponent, SaveResultsBannerComponent],
   templateUrl: './resume-analysis.component.html',
   styleUrl: './resume-analysis.component.scss'
 })
@@ -25,6 +26,7 @@ export class ResumeAnalysisComponent implements OnInit {
   analysis = signal<AnalysisResponse | null>(null);
   isLoading = signal<boolean>(true);
   errorMessage = signal<string | null>(null);
+  isAnonymous = signal<boolean>(false);
 
   showOptimized = signal(false);
   copied = signal(false);
@@ -77,7 +79,19 @@ export class ResumeAnalysisComponent implements OnInit {
     }
 
     this.resumeId.set(id);
+    this.checkIfAnonymous();
     this.startPolling();
+  }
+
+  private checkIfAnonymous(): void {
+    const userId = localStorage.getItem('cv-analyzer-session-id');
+    this.isAnonymous.set(!!userId && userId.startsWith('guest-'));
+  }
+
+  handleSaveResults(): void {
+    // TODO: Implement registration flow in Story 2
+    console.log('Save results clicked - will redirect to registration');
+    // Future: this.router.navigate(['/register'], { queryParams: { returnUrl: `/analysis/${this.resumeId()}` } });
   }
 
   private startPolling(): void {
