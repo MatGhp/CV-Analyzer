@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -18,6 +18,7 @@ export class ResumeAnalysisComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly resumeService = inject(ResumeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   resumeId = signal<string>('');
   status = signal<ResumeStatusResponse | null>(null);
@@ -81,7 +82,7 @@ export class ResumeAnalysisComponent implements OnInit {
 
   private startPolling(): void {
     this.resumeService.pollResumeStatus(this.resumeId())
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (statusUpdate) => {
           this.status.set(statusUpdate);
@@ -105,7 +106,7 @@ export class ResumeAnalysisComponent implements OnInit {
 
   private loadAnalysis(): void {
     this.resumeService.getAnalysis(this.resumeId())
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (analysisData) => {
           this.analysis.set(analysisData);

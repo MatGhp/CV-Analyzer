@@ -112,7 +112,7 @@ else
     Log.Information("Skipping database migrations in Testing environment");
 }
 
-// Initialize Azure Storage Queues if configured
+// Initialize Azure Storage Queues and Blob Containers if configured
 using (var scope = app.Services.CreateScope())
 {
     try
@@ -130,10 +130,24 @@ using (var scope = app.Services.CreateScope())
         {
             Log.Warning("QueueServiceClient not configured. Skipping queue initialization.");
         }
+
+        var blobServiceClient = scope.ServiceProvider.GetService<Azure.Storage.Blobs.BlobServiceClient>();
+        if (blobServiceClient != null)
+        {
+            var storageOptions = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<CVAnalyzer.Infrastructure.Options.AzureStorageOptions>>().Value;
+            
+            var containerClient = blobServiceClient.GetBlobContainerClient(storageOptions.ContainerName);
+            await containerClient.CreateIfNotExistsAsync();
+            Log.Information("Azure Blob Storage container initialized: {ContainerName}", storageOptions.ContainerName);
+        }
+        else
+        {
+            Log.Warning("BlobServiceClient not configured. Skipping blob container initialization.");
+        }
     }
     catch (Exception ex)
     {
-        Log.Warning(ex, "Failed to initialize Azure Storage Queues. This is expected in test environments.");
+        Log.Warning(ex, "Failed to initialize Azure Storage. This is expected in test environments.");
     }
 }
 

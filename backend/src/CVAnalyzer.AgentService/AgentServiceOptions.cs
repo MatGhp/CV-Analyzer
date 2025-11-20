@@ -11,4 +11,6 @@ public sealed class AgentServiceOptions
     public double Temperature { get; set; } = 0.15;
 
     public double TopP { get; set; } = 0.95;
+
+    public string? ApiKey { get; set; }
 }

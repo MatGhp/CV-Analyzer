@@ -58,9 +58,16 @@ public static class DependencyInjection
                 throw new InvalidOperationException("Agent:Endpoint configuration value is required.");
             }
 
-            // Use DefaultAzureCredential for passwordless authentication (managed identity or Azure CLI)
-            var credential = new DefaultAzureCredential();
-            return new OpenAIClient(new Uri(options.Endpoint), credential);
+            // Use API key if provided (local development), otherwise use DefaultAzureCredential (production)
+            if (!string.IsNullOrWhiteSpace(options.ApiKey))
+            {
+                return new OpenAIClient(new Uri(options.Endpoint), new AzureKeyCredential(options.ApiKey));
+            }
+            else
+            {
+                var credential = new DefaultAzureCredential();
+                return new OpenAIClient(new Uri(options.Endpoint), credential);
+            }
         });
 
         services.AddSingleton<AgentService.ResumeAnalysisAgent>();
