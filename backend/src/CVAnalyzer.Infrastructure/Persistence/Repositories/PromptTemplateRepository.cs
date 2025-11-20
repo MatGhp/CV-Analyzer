@@ -1,30 +1,37 @@
 using CVAnalyzer.Application.Common.Interfaces;
 using CVAnalyzer.Domain.Entities;
+using CVAnalyzer.Domain.Repositories;
+using CVAnalyzer.Infrastructure.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CVAnalyzer.Infrastructure.Persistence.Repositories;
 
 /// <summary>
 /// Repository implementation for PromptTemplate with in-memory caching.
 /// Cache TTL: 15 minutes to balance freshness and performance.
+/// Uses semaphore to prevent race conditions during cache invalidation.
 /// </summary>
 public class PromptTemplateRepository : IPromptTemplateRepository
 {
     private readonly IApplicationDbContext _context;
     private readonly IMemoryCache _cache;
     private readonly ILogger<PromptTemplateRepository> _logger;
-    private const int CacheExpirationMinutes = 15;
+    private readonly int _cacheExpirationMinutes;
+    private static readonly SemaphoreSlim _cacheLock = new(1, 1);
 
     public PromptTemplateRepository(
         IApplicationDbContext context,
         IMemoryCache cache,
+        IOptions<PromptCacheOptions> cacheOptions,
         ILogger<PromptTemplateRepository> logger)
     {
         _context = context;
         _cache = cache;
         _logger = logger;
+        _cacheExpirationMinutes = cacheOptions.Value.ExpirationMinutes;
     }
 
     public async Task<PromptTemplate?> GetActiveAsync(
@@ -35,9 +42,21 @@ public class PromptTemplateRepository : IPromptTemplateRepository
     {
         var cacheKey = GetCacheKey(environment, agentType, taskType);
 
-        return await _cache.GetOrCreateAsync(cacheKey, async entry =>
+        // Fast path: check cache without lock
+        if (_cache.TryGetValue(cacheKey, out PromptTemplate? cached))
         {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(CacheExpirationMinutes);
+            return cached;
+        }
+
+        // Slow path: acquire lock and double-check cache
+        await _cacheLock.WaitAsync(cancellationToken);
+        try
+        {
+            // Double-check pattern: another thread might have populated the cache
+            if (_cache.TryGetValue(cacheKey, out cached))
+            {
+                return cached;
+            }
 
             _logger.LogDebug(
                 "Cache miss for prompt: {Environment}/{AgentType}/{TaskType}. Fetching from database.",
@@ -62,10 +81,17 @@ public class PromptTemplateRepository : IPromptTemplateRepository
                 _logger.LogInformation(
                     "Loaded prompt version {Version} for {Environment}/{AgentType}/{TaskType}",
                     prompt.Version, environment, agentType, taskType);
+
+                // Set cache with sliding expiration
+                _cache.Set(cacheKey, prompt, TimeSpan.FromMinutes(_cacheExpirationMinutes));
             }
 
             return prompt;
-        });
+        }
+        finally
+        {
+            _cacheLock.Release();
+        }
     }
 
     public async Task<PromptTemplate?> GetVersionAsync(

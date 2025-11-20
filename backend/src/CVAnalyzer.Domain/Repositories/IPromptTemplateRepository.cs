@@ -1,6 +1,6 @@
 using CVAnalyzer.Domain.Entities;
 
-namespace CVAnalyzer.Application.Common.Interfaces;
+namespace CVAnalyzer.Domain.Repositories;
 
 /// <summary>
 /// Repository for managing AI prompt templates with caching support.

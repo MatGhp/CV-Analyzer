@@ -6,8 +6,8 @@ using System.Linq;
 using Azure;
 using Azure.AI.OpenAI;
 using CVAnalyzer.AgentService.Models;
-using CVAnalyzer.Application.Common.Interfaces;
 using CVAnalyzer.Domain.Entities;
+using CVAnalyzer.Domain.Repositories;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 

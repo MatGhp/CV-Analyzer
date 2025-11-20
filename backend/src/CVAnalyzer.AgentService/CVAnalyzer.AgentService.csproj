@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CVAnalyzer.Application\CVAnalyzer.Application.csproj" />
+    <ProjectReference Include="..\CVAnalyzer.Domain\CVAnalyzer.Domain.csproj" />
   </ItemGroup>
 
   <!-- Prevent appsettings.json from being copied to consuming project's publish output -->

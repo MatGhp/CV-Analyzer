@@ -1,5 +1,6 @@
 using CVAnalyzer.Application.Common.Interfaces;
 using CVAnalyzer.Domain.Entities;
+using CVAnalyzer.Domain.Repositories;
 using CVAnalyzer.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;

@@ -5,6 +5,7 @@ using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using CVAnalyzer.Application.Common.Interfaces;
+using CVAnalyzer.Domain.Repositories;
 using CVAnalyzer.Infrastructure.Options;
 using CVAnalyzer.Infrastructure.Persistence;
 using CVAnalyzer.Infrastructure.Services;
@@ -24,6 +25,7 @@ public static class DependencyInjection
         services.Configure<AzureStorageOptions>(options => configuration.GetSection(AzureStorageOptions.SectionName).Bind(options));
         services.Configure<DocumentIntelligenceOptions>(options => configuration.GetSection(DocumentIntelligenceOptions.SectionName).Bind(options));
         services.Configure<QueueOptions>(options => configuration.GetSection(QueueOptions.SectionName).Bind(options));
+        services.Configure<PromptCacheOptions>(options => configuration.GetSection(PromptCacheOptions.SectionName).Bind(options));
 
         ConfigureDatabase(services, configuration);
         ConfigureAzureStorage(services, configuration);

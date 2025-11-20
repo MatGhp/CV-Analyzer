@@ -12,13 +12,38 @@ public static class PromptSeeder
 {
     public static async Task SeedPromptsAsync(ApplicationDbContext context, ILogger logger, CancellationToken cancellationToken = default)
     {
-        if (await context.PromptTemplates.AnyAsync(cancellationToken))
+        // Check for required prompts per environment
+        var expectedPrompts = new[]
         {
-            logger.LogInformation("Prompt templates already seeded. Skipping.");
+            ("ResumeAnalyzer", "Evaluation", "Development"),
+            ("ResumeAnalyzer", "Evaluation", "Test"),
+            ("ResumeAnalyzer", "Evaluation", "Production")
+        };
+
+        var missingPrompts = new List<(string, string, string)>();
+        foreach (var (agentType, taskType, environment) in expectedPrompts)
+        {
+            var exists = await context.PromptTemplates
+                .AnyAsync(pt => pt.AgentType == agentType 
+                            && pt.TaskType == taskType 
+                            && pt.Environment == environment, 
+                        cancellationToken);
+            
+            if (!exists)
+            {
+                missingPrompts.Add((agentType, taskType, environment));
+            }
+        }
+
+        if (missingPrompts.Count == 0)
+        {
+            logger.LogInformation("All required prompt templates present. Skipping seeding.");
             return;
         }
 
-        logger.LogInformation("Seeding prompt templates for all environments...");
+        logger.LogInformation("Seeding {Count} missing prompt templates for environments: {Environments}", 
+            missingPrompts.Count, 
+            string.Join(", ", missingPrompts.Select(m => m.Item3).Distinct()));
 
         var prompts = new List<PromptTemplate>
         {
