@@ -41,7 +41,7 @@ http {
             add_header Content-Type text/plain;
         }
 
-        # API proxy to backend container (HTTP for local development)
+        # API proxy to backend container on port 8080 (local development - HTTP within Docker network)
         location /api/ {
             proxy_pass http://api:8080/api/;
             proxy_http_version 1.1;

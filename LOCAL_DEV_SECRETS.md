@@ -61,6 +61,7 @@ Open `.env` in your editor and replace placeholders:
 AZURE_STORAGE_CONNECTION_STRING=<paste connection string from step 2>
 AGENT_API_KEY=<paste OpenAI key from step 2>
 DOCUMENT_INTELLIGENCE_API_KEY=<paste Doc Intel key from step 2>
+SQL_SA_PASSWORD=YourStrong@Passw0rd  # Or choose your own password
 ```
 
 **Step 4: Start the full stack**
@@ -83,7 +84,7 @@ curl http://localhost:5000/health  # Backend API
 **Access Points:**
 - 🌐 **Frontend**: http://localhost:4200
 - 🔧 **Backend API**: http://localhost:5000
-- 🗄️ **SQL Server**: localhost:1433 (User: `sa`, Password: `YourStrong@Passw0rd`)
+- 🗄️ **SQL Server**: localhost:1433 (User: `sa`, Password: from `.env` file `SQL_SA_PASSWORD`)
 - ☁️ **Azure Services**: Real dev environment (storage, AI, Document Intelligence)
 
 ### Option 2: .NET CLI (Backend Only)

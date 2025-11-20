@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, interval, timer } from 'rxjs';
-import { switchMap, takeWhile, tap, startWith } from 'rxjs/operators';
+import { Observable, timer } from 'rxjs';
+import { switchMap, takeWhile, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   Resume,
