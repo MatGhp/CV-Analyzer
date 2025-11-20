@@ -7,7 +7,8 @@ using Azure;
 using Azure.AI.OpenAI;
 using CVAnalyzer.AgentService.Models;
 using CVAnalyzer.Application.Common.Interfaces;
-using Microsoft.Extensions.Configuration;
+using CVAnalyzer.Domain.Entities;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace CVAnalyzer.AgentService;
@@ -30,13 +31,13 @@ public sealed class ResumeAnalysisAgent
         OpenAIClient client, 
         IOptions<AgentServiceOptions> options, 
         IPromptTemplateRepository promptRepository,
-        IConfiguration configuration,
+        IHostEnvironment hostEnvironment,
         ILogger<ResumeAnalysisAgent> logger)
     {
         _client = client;
         _options = options.Value;
         _promptRepository = promptRepository;
-        _environment = configuration["ASPNETCORE_ENVIRONMENT"] ?? "Production";
+        _environment = hostEnvironment.EnvironmentName ?? "Production";
         _logger = logger;
     }
 
@@ -130,17 +131,27 @@ public sealed class ResumeAnalysisAgent
 
     private async Task<ChatCompletionsOptions> BuildChatOptionsAsync(string resumeContent, CancellationToken cancellationToken)
     {
-        // Fetch environment-specific prompt from database
-        var promptTemplate = await _promptRepository.GetActiveAsync(
-            _environment,
-            "ResumeAnalyzer",
-            "Evaluation",
-            cancellationToken);
+        // Fetch environment-specific prompt from database with fallback on failure
+        PromptTemplate? promptTemplate = null;
+        try
+        {
+            promptTemplate = await _promptRepository.GetActiveAsync(
+                _environment,
+                "ResumeAnalyzer",
+                "Evaluation",
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to fetch prompt from database for {Environment}/ResumeAnalyzer/Evaluation. Falling back to default prompt.",
+                _environment);
+        }
 
         if (promptTemplate == null)
         {
-            _logger.LogError(
-                "No active prompt found for {Environment}/ResumeAnalyzer/Evaluation. Falling back to default prompt.",
+            _logger.LogWarning(
+                "No active prompt found for {Environment}/ResumeAnalyzer/Evaluation. Using fallback prompt.",
                 _environment);
             
             // Fallback to hardcoded prompt if database is unavailable

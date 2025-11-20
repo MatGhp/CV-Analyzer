@@ -68,8 +68,6 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.Content)
                 .IsRequired();
 
-            entity.Property(e => e.Variables);
-
             entity.Property(e => e.CreatedBy)
                 .HasMaxLength(100)
                 .IsRequired();
@@ -79,15 +77,15 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
                 .IsUnique()
                 .HasDatabaseName("IX_PromptTemplates_AgentTask_Version");
 
-            // Performance index for active prompt lookups
-            entity.HasIndex(e => new { e.Environment, e.AgentType, e.TaskType, e.IsActive })
+            // Performance index for active prompt lookups (IsActive in filter, not columns)
+            entity.HasIndex(e => new { e.Environment, e.AgentType, e.TaskType })
                 .HasFilter("[IsActive] = 1")
                 .HasDatabaseName("IX_PromptTemplates_Active_Lookup");
 
-            // Check constraint for valid environments
-            entity.HasCheckConstraint(
+            // Check constraint for valid environments (using updated API)
+            entity.ToTable(tb => tb.HasCheckConstraint(
                 "CK_PromptTemplates_Environment",
-                "[Environment] IN ('Development', 'Test', 'Production')");
+                "[Environment] IN ('Development', 'Test', 'Production')"));
         });
 
         base.OnModelCreating(modelBuilder);

@@ -102,7 +102,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
             
             // Seed prompt templates after migrations
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-            CVAnalyzer.Infrastructure.Persistence.Seeders.PromptSeeder.SeedPrompts(dbContext, logger);
+            await CVAnalyzer.Infrastructure.Persistence.Seeders.PromptSeeder.SeedPromptsAsync(dbContext, logger, CancellationToken.None);
         }
         catch (Exception ex)
         {

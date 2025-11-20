@@ -116,21 +116,18 @@ namespace CVAnalyzer.Infrastructure.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Variables")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("Version")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Environment", "AgentType", "TaskType")
+                        .HasDatabaseName("IX_PromptTemplates_Active_Lookup")
+                        .HasFilter("[IsActive] = 1");
+
                     b.HasIndex("AgentType", "TaskType", "Environment", "Version")
                         .IsUnique()
                         .HasDatabaseName("IX_PromptTemplates_AgentTask_Version");
-
-                    b.HasIndex("Environment", "AgentType", "TaskType", "IsActive")
-                        .HasDatabaseName("IX_PromptTemplates_Active_Lookup")
-                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("PromptTemplates", t =>
                         {

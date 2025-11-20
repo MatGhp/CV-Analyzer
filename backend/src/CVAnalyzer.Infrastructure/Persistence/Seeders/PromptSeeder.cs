@@ -10,9 +10,9 @@ namespace CVAnalyzer.Infrastructure.Persistence.Seeders;
 /// </summary>
 public static class PromptSeeder
 {
-    public static void SeedPrompts(ApplicationDbContext context, ILogger logger)
+    public static async Task SeedPromptsAsync(ApplicationDbContext context, ILogger logger, CancellationToken cancellationToken = default)
     {
-        if (context.PromptTemplates.Any())
+        if (await context.PromptTemplates.AnyAsync(cancellationToken))
         {
             logger.LogInformation("Prompt templates already seeded. Skipping.");
             return;
@@ -183,9 +183,16 @@ public static class PromptSeeder
             }
         };
 
-        context.PromptTemplates.AddRange(prompts);
-        context.SaveChanges();
-
-        logger.LogInformation("Successfully seeded {Count} prompt templates", prompts.Count);
+        try
+        {
+            context.PromptTemplates.AddRange(prompts);
+            await context.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Successfully seeded {Count} prompt templates", prompts.Count);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to seed prompt templates. Application will use fallback prompts.");
+            // Don't rethrow - allow app to start with fallback prompts
+        }
     }
 }

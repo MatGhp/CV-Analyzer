@@ -126,52 +126,71 @@ public class PromptTemplateRepository : IPromptTemplateRepository
         int version,
         CancellationToken cancellationToken = default)
     {
-        // Get all versions for this agent/task/environment
-        var allVersions = await _context.PromptTemplates
-            .Where(p => p.AgentType == agentType
-                     && p.TaskType == taskType
-                     && p.Environment == environment)
-            .ToListAsync(cancellationToken);
+        // Use transaction to prevent race conditions when multiple requests activate different versions
+        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 
-        if (!allVersions.Any())
+        try
         {
-            _logger.LogWarning(
-                "No prompt templates found for {Environment}/{AgentType}/{TaskType}",
-                environment, agentType, taskType);
-            return false;
-        }
+            // Check if target version exists
+            var targetExists = await _context.PromptTemplates
+                .AnyAsync(p => p.AgentType == agentType
+                            && p.TaskType == taskType
+                            && p.Environment == environment
+                            && p.Version == version,
+                         cancellationToken);
 
-        var targetVersion = allVersions.FirstOrDefault(p => p.Version == version);
-        if (targetVersion == null)
-        {
-            _logger.LogWarning(
-                "Version {Version} not found for {Environment}/{AgentType}/{TaskType}",
+            if (!targetExists)
+            {
+                _logger.LogWarning(
+                    "Version {Version} not found for {Environment}/{AgentType}/{TaskType}",
+                    version, environment, agentType, taskType);
+                return false;
+            }
+
+            // Load all versions for this agent/task/environment
+            var allVersions = await _context.PromptTemplates
+                .Where(p => p.AgentType == agentType
+                         && p.TaskType == taskType
+                         && p.Environment == environment)
+                .ToListAsync(cancellationToken);
+
+            // Deactivate all versions
+            foreach (var prompt in allVersions)
+            {
+                prompt.IsActive = false;
+                prompt.UpdatedAt = DateTime.UtcNow;
+            }
+
+            // Activate target version
+            var targetPrompt = allVersions.FirstOrDefault(p => p.Version == version);
+            if (targetPrompt != null)
+            {
+                targetPrompt.IsActive = true;
+                targetPrompt.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "Activated prompt version {Version} for {Environment}/{AgentType}/{TaskType}",
                 version, environment, agentType, taskType);
-            return false;
-        }
 
-        // Deactivate all versions
-        foreach (var prompt in allVersions)
+            // Clear cache to force refresh (only after successful commit)
+            var cacheKey = GetCacheKey(environment, agentType, taskType);
+            _cache.Remove(cacheKey);
+
+            return true;
+        }
+        catch (Exception ex)
         {
-            prompt.IsActive = false;
-            prompt.UpdatedAt = DateTime.UtcNow;
+            _logger.LogError(ex,
+                "Failed to activate version {Version} for {Environment}/{AgentType}/{TaskType}",
+                version, environment, agentType, taskType);
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
         }
-
-        // Activate target version
-        targetVersion.IsActive = true;
-        targetVersion.UpdatedAt = DateTime.UtcNow;
-
-        await _context.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation(
-            "Activated prompt version {Version} for {Environment}/{AgentType}/{TaskType}",
-            version, environment, agentType, taskType);
-
-        // Clear cache to force refresh
-        var cacheKey = GetCacheKey(environment, agentType, taskType);
-        _cache.Remove(cacheKey);
-
-        return true;
     }
 
     private static string GetCacheKey(string environment, string agentType, string taskType)

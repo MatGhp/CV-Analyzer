@@ -38,12 +38,6 @@ public class PromptTemplate
     public string Content { get; set; } = string.Empty;
 
     /// <summary>
-    /// Optional JSON string with variable substitutions (e.g., {"target_role": "Software Engineer"}).
-    /// Can be null if no variables are needed.
-    /// </summary>
-    public string? Variables { get; set; }
-
-    /// <summary>
     /// Version number for tracking prompt evolution.
     /// Allows rollback and A/B testing.
     /// </summary>

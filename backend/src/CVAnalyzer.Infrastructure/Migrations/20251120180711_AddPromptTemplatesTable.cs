@@ -21,7 +21,6 @@ namespace CVAnalyzer.Infrastructure.Migrations
                     Environment = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Variables = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Version = table.Column<int>(type: "int", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
@@ -37,7 +36,7 @@ namespace CVAnalyzer.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_PromptTemplates_Active_Lookup",
                 table: "PromptTemplates",
-                columns: new[] { "Environment", "AgentType", "TaskType", "IsActive" },
+                columns: new[] { "Environment", "AgentType", "TaskType" },
                 filter: "[IsActive] = 1");
 
             migrationBuilder.CreateIndex(
