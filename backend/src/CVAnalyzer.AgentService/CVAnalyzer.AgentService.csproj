@@ -12,6 +12,10 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CVAnalyzer.Domain\CVAnalyzer.Domain.csproj" />
+  </ItemGroup>
+
   <!-- Prevent appsettings.json from being copied to consuming project's publish output -->
   <ItemGroup>
     <Content Update="appsettings*.json" CopyToPublishDirectory="Never" />

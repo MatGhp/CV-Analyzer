@@ -6,6 +6,9 @@ using System.Linq;
 using Azure;
 using Azure.AI.OpenAI;
 using CVAnalyzer.AgentService.Models;
+using CVAnalyzer.Domain.Entities;
+using CVAnalyzer.Domain.Repositories;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace CVAnalyzer.AgentService;
@@ -20,12 +23,21 @@ public sealed class ResumeAnalysisAgent
 
     private readonly OpenAIClient _client;
     private readonly AgentServiceOptions _options;
+    private readonly IPromptTemplateRepository _promptRepository;
     private readonly ILogger<ResumeAnalysisAgent> _logger;
+    private readonly string _environment;
 
-    public ResumeAnalysisAgent(OpenAIClient client, IOptions<AgentServiceOptions> options, ILogger<ResumeAnalysisAgent> logger)
+    public ResumeAnalysisAgent(
+        OpenAIClient client, 
+        IOptions<AgentServiceOptions> options, 
+        IPromptTemplateRepository promptRepository,
+        IHostEnvironment hostEnvironment,
+        ILogger<ResumeAnalysisAgent> logger)
     {
         _client = client;
         _options = options.Value;
+        _promptRepository = promptRepository;
+        _environment = hostEnvironment.EnvironmentName ?? "Production";
         _logger = logger;
     }
 
@@ -41,7 +53,7 @@ public sealed class ResumeAnalysisAgent
         _logger.LogInformation("Starting resume analysis for user {UserId}", request.UserId);
         _logger.LogInformation("Using endpoint: {Endpoint}, deployment: {Deployment}", _options.Endpoint, _options.Deployment);
 
-        var chatOptions = BuildChatOptions(request.Content);
+        var chatOptions = await BuildChatOptionsAsync(request.Content, cancellationToken);
 
         _logger.LogInformation("Calling Azure OpenAI with {MessageCount} messages", chatOptions.Messages.Count);
         var completion = await _client.GetChatCompletionsAsync(chatOptions, cancellationToken);
@@ -117,8 +129,39 @@ public sealed class ResumeAnalysisAgent
         };
     }
 
-    private ChatCompletionsOptions BuildChatOptions(string resumeContent)
+    private async Task<ChatCompletionsOptions> BuildChatOptionsAsync(string resumeContent, CancellationToken cancellationToken)
     {
+        // Fetch environment-specific prompt from database with fallback on failure
+        PromptTemplate? promptTemplate = null;
+        try
+        {
+            promptTemplate = await _promptRepository.GetActiveAsync(
+                _environment,
+                "ResumeAnalyzer",
+                "Evaluation",
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to fetch prompt from database for {Environment}/ResumeAnalyzer/Evaluation. Falling back to default prompt.",
+                _environment);
+        }
+
+        if (promptTemplate == null)
+        {
+            _logger.LogWarning(
+                "No active prompt found for {Environment}/ResumeAnalyzer/Evaluation. Using fallback prompt.",
+                _environment);
+            
+            // Fallback to hardcoded prompt if database is unavailable
+            return BuildFallbackChatOptions(resumeContent);
+        }
+
+        _logger.LogInformation(
+            "Using prompt version {Version} for {Environment}/ResumeAnalyzer/Evaluation",
+            promptTemplate.Version, _environment);
+
         var options = new ChatCompletionsOptions
         {
             DeploymentName = _options.Deployment,
@@ -133,13 +176,37 @@ public sealed class ResumeAnalysisAgent
             }}
         };
 
-        options.Messages.Add(new ChatRequestSystemMessage(SystemPrompt));
+        options.Messages.Add(new ChatRequestSystemMessage(promptTemplate.Content));
         options.Messages.Add(new ChatRequestUserMessage(resumeContent));
 
         return options;
     }
 
-    private const string SystemPrompt = """
+    private ChatCompletionsOptions BuildFallbackChatOptions(string resumeContent)
+    {
+        _logger.LogWarning("Using fallback prompt. This should only happen during initial setup or database issues.");
+        
+        var options = new ChatCompletionsOptions
+        {
+            DeploymentName = _options.Deployment,
+            Temperature = (float)_options.Temperature,
+            NucleusSamplingFactor = (float)_options.TopP,
+            MaxTokens = 1200,
+            Functions = { new FunctionDefinition 
+            { 
+                Name = "resume_analysis",
+                Description = "Analyze a resume and provide structured feedback",
+                Parameters = BinaryData.FromString(JsonSchema)
+            }}
+        };
+
+        options.Messages.Add(new ChatRequestSystemMessage(FallbackSystemPrompt));
+        options.Messages.Add(new ChatRequestUserMessage(resumeContent));
+
+        return options;
+    }
+
+    private const string FallbackSystemPrompt = """
 You are an expert resume analyst. Evaluate the candidate's resume and respond with JSON that includes:
 1. A score from 0-100 based on ATS compatibility, clarity, and achievement quantification
 2. A revised resume summary with improved wording

@@ -99,6 +99,10 @@ if (!builder.Environment.IsEnvironment("Testing"))
             {
                 Log.Information("Database is up to date. No migrations needed.");
             }
+            
+            // Seed prompt templates after migrations
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            await CVAnalyzer.Infrastructure.Persistence.Seeders.PromptSeeder.SeedPromptsAsync(dbContext, logger, CancellationToken.None);
         }
         catch (Exception ex)
         {
