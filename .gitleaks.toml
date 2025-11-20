@@ -6,14 +6,11 @@ description = "Allowlist for known safe values"
 
 # Azurite Storage Emulator - Standard well-known key for local development
 # This is publicly documented at: https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite
+# Test API keys and placeholders
 regexes = [
     '''Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==''',
     '''devstoreaccount1''',
     '''UseDevelopmentStorage=true''',
-]
-
-# Test API keys and placeholders
-regexes = [
     '''test-key-for-local-dev''',
     '''<PASSWORD_PLACEHOLDER>''',
     '''YOUR_API_KEY_HERE''',
