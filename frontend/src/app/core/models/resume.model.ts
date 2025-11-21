@@ -72,6 +72,7 @@ export interface CandidateInfo {
 
 export interface AnalysisResponse {
   id: string;
+  userId: string;
   fileName: string;
   score?: number;
   uploadedAt: string;

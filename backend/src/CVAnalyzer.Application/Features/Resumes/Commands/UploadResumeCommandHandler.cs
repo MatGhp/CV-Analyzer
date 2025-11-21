@@ -12,23 +12,32 @@ public class UploadResumeCommandHandler : IRequestHandler<UploadResumeCommand, U
     private readonly IApplicationDbContext _context;
     private readonly IBlobStorageService _blobStorage;
     private readonly IResumeQueueService _queueService;
+    private readonly ISessionTokenService _sessionTokenService;
     private readonly ILogger<UploadResumeCommandHandler> _logger;
 
     public UploadResumeCommandHandler(
         IApplicationDbContext context,
         IBlobStorageService blobStorage,
         IResumeQueueService queueService,
+        ISessionTokenService sessionTokenService,
         ILogger<UploadResumeCommandHandler> logger)
     {
         _context = context;
         _blobStorage = blobStorage;
         _queueService = queueService;
+        _sessionTokenService = sessionTokenService;
         _logger = logger;
     }
 
     public async Task<UploadResumeResponse> Handle(UploadResumeCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Uploading resume {FileName} for user {UserId}", request.FileName, request.UserId);
+        var isAnonymous = _sessionTokenService.IsAnonymousUser(request.UserId);
+        
+        _logger.LogInformation(
+            "Uploading resume {FileName} for {UserType} user {UserId}", 
+            request.FileName, 
+            isAnonymous ? "anonymous" : "authenticated",
+            request.UserId);
 
         var blobUrl = await _blobStorage.UploadFileAsync(request.FileStream, request.FileName, cancellationToken);
 
@@ -40,6 +49,8 @@ public class UploadResumeCommandHandler : IRequestHandler<UploadResumeCommand, U
             BlobUrl = blobUrl,
             Content = string.Empty,
             Status = ResumeStatus.Pending,
+            IsAnonymous = isAnonymous,
+            AnonymousExpiresAt = isAnonymous ? DateTime.UtcNow.AddHours(24) : null,
             CreatedAt = DateTimeOffset.UtcNow.UtcDateTime
         };
 
@@ -48,7 +59,10 @@ public class UploadResumeCommandHandler : IRequestHandler<UploadResumeCommand, U
 
         await _queueService.EnqueueResumeAnalysisAsync(resume.Id, request.UserId);
 
-        _logger.LogInformation("Resume {ResumeId} uploaded successfully. Analysis message enqueued.", resume.Id);
+        _logger.LogInformation(
+            "Resume {ResumeId} uploaded successfully. Analysis message enqueued. {ExpiryInfo}", 
+            resume.Id,
+            isAnonymous ? $"Expires at {resume.AnonymousExpiresAt:u}" : "No expiry");
 
         return new UploadResumeResponse(
             resume.Id,

@@ -1,0 +1,32 @@
+@if (isAnonymous()) {
+  <div class="save-results-banner" role="alert">
+    <div class="banner-content">
+      <div class="banner-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+          <polyline points="17 21 17 13 7 13 7 21" />
+          <polyline points="7 3 7 8 15 8" />
+        </svg>
+      </div>
+      
+      <div class="banner-text">
+        <h3>Your analysis will expire in 24 hours</h3>
+        <p>Create a free account to save your results, track progress, and upload more resumes.</p>
+      </div>
+      
+      <button 
+        type="button" 
+        class="save-button"
+        (click)="handleSaveClick()"
+        aria-label="Create account to save results">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <line x1="19" y1="8" x2="19" y2="14" />
+          <line x1="22" y1="11" x2="16" y2="11" />
+        </svg>
+        Save My Results
+      </button>
+    </div>
+  </div>
+}

@@ -1,4 +1,12 @@
 <div class="analysis-container">
+  <!-- Save Results Banner for Anonymous Users -->
+  @if (!isLoading() && !errorMessage() && isAnonymous()) {
+    <app-save-results-banner 
+      [isAnonymous]="isAnonymous()"
+      (onSaveClick)="handleSaveResults()"
+    />
+  }
+
   <!-- Loading State -->
   @if (isLoading()) {
     <div class="loading-section">
