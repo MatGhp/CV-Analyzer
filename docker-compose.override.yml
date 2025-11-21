@@ -17,6 +17,6 @@ services:
   
   api:
     environment:
-      - AzureStorage__ConnectionString=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1
-      - Agent__ApiKey=test-key-for-local-dev
-      - DocumentIntelligence__ApiKey=test-key-for-local-dev
+      - AzureStorage__ConnectionString=${AZURE_STORAGE_CONNECTION_STRING}
+      - Agent__ApiKey=${AGENT_API_KEY}
+      - DocumentIntelligence__ApiKey=${DOCUMENT_INTELLIGENCE_API_KEY}
