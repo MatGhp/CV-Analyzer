@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 
 namespace CVAnalyzer.AgentService.Models;
 
@@ -13,5 +14,5 @@ public sealed class ResumeAnalysisResponse
 
     public CandidateInfoDto? CandidateInfo { get; init; }
 
-    public IReadOnlyDictionary<string, string> Metadata { get; init; } = new Dictionary<string, string>();
+    public IReadOnlyDictionary<string, JsonElement> Metadata { get; init; } = new Dictionary<string, JsonElement>();
 }

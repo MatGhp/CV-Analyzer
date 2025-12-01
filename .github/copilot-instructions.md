@@ -15,6 +15,7 @@
 **Key Stack:**
 - Frontend: Angular 20 (zoneless, signals, standalone components)
 - Backend: .NET 10 (MediatR CQRS, FluentValidation, EF Core)
+- Authentication: JWT tokens (BCrypt password hashing, 60-min expiration)
 - AI: Azure.AI.OpenAI SDK (GPT-4o function calling)
 - Infrastructure: Azure Container Apps, SQL Database, Storage (blobs + queues)
 - Deployment: Terraform IaC, GitHub Actions CI/CD
@@ -168,12 +169,13 @@ Safe to commit.
 
 1. [Angular Frontend](#angular-frontend-frontend) - Modern Angular 20 with signals & zoneless architecture
 2. [.NET Backend Service](#net-backend-service-backend) - Clean Architecture with CQRS pattern
-3. [.NET AgentService](#net-agentservice-backendsrccvanalyzeragentservice) - AI-powered resume analysis
-4. [Testing Patterns](#testing-patterns) - xUnit, FluentAssertions, NSubstitute patterns
-5. [Development Workflows & Tooling](#development-workflows--tooling) - Docker, Git, local dev options
-6. [Infrastructure & Deployment](#infrastructure--deployment) - Terraform modules, Container Apps, CI/CD
-7. [Observability & Health Checks](#observability--health-checks) - Serilog, Application Insights, health endpoints
-8. [Future Architecture](#future-architecture-planned-migration) - Durable Agents roadmap
+3. [Authentication & Authorization](#authentication--authorization-backendsrccvanalyzerapi) - JWT tokens, BCrypt, auth guards
+4. [.NET AgentService](#net-agentservice-backendsrccvanalyzeragentservice) - AI-powered resume analysis
+5. [Testing Patterns](#testing-patterns) - xUnit, FluentAssertions, NSubstitute patterns
+6. [Development Workflows & Tooling](#development-workflows--tooling) - Docker, Git, local dev options
+7. [Infrastructure & Deployment](#infrastructure--deployment) - Terraform modules, Container Apps, CI/CD
+8. [Observability & Health Checks](#observability--health-checks) - Serilog, Application Insights, health endpoints
+9. [Future Architecture](#future-architecture-planned-migration) - Durable Agents roadmap
 
 ---
 
@@ -663,6 +665,319 @@ public class MyCommandValidator : AbstractValidator<MyCommand>
   - Validate all inputs (FluentValidation)
   - Use parameterized queries (EF Core handles this)
   - Log errors but sanitize sensitive data
+
+---
+
+## Authentication & Authorization (`backend/src/CVAnalyzer.API/`)
+
+**Status**: Core authentication ✅ Complete (69% of User Story 2) | Email verification ❌ Pending (see `NEXT_STEPS_USER_STORY_2.md`)
+
+### Architecture Overview
+
+- **Authentication**: JWT Bearer tokens (signed with HS256)
+- **Password Hashing**: BCrypt with cost factor 12 (auto-adaptive salt)
+- **Token Expiration**: 60 minutes (configurable via `Jwt:ExpirationMinutes`)
+- **Frontend Guards**: Route guards protect authenticated routes
+- **Backend Authorization**: `[Authorize]` attribute on protected endpoints
+- **Guest Sessions**: Anonymous users get session tokens for temporary resume storage
+
+### Key Components
+
+**JWT Token Service** (`backend/src/CVAnalyzer.Infrastructure/Authentication/JwtTokenService.cs`):
+- Implements `IJwtTokenService` interface
+- Generates JWT tokens with user ID, email, full name claims
+- Validates tokens and extracts claims
+- Configuration: `Jwt:SecretKey` (min 32 chars), `Jwt:Issuer`, `Jwt:Audience`, `Jwt:ExpirationMinutes`
+
+**Password Service** (`backend/src/CVAnalyzer.Infrastructure/Authentication/PasswordService.cs`):
+- BCrypt hashing with work factor 12 (increases computation time as hardware improves)
+- Salt automatically generated per password
+- Verification via `BCrypt.Net.Verify()`
+
+**User Entity** (`backend/src/CVAnalyzer.Domain/Entities/User.cs`):
+- Properties: `Id`, `Email`, `PasswordHash`, `FullName`, `Phone`, `CreatedAt`, `LastLoginAt`, `GuestSessionToken`
+- Navigation: `Resumes` collection (one-to-many)
+- **Missing** (planned): `EmailVerificationToken`, `EmailVerificationTokenExpiry`, `IsEmailVerified`
+
+### CQRS Commands & Queries
+
+**Auth Features Location**: `backend/src/CVAnalyzer.Application/Features/Auth/`
+
+**Commands** (write operations):
+- `RegisterCommand` - Create new user, optionally migrate guest resumes via `GuestSessionToken`
+- `LoginCommand` - Validate credentials, generate JWT token, update `LastLoginAt`
+- `LogoutCommand` - Placeholder (stateless JWT, no server-side logout needed)
+
+**Queries** (read operations):
+- `GetUserProfileQuery` - Fetch user profile by ID (from JWT claims)
+
+**Handler Pattern Example**:
+```csharp
+// backend/src/CVAnalyzer.Application/Features/Auth/Commands/RegisterCommandHandler.cs
+public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterResponse>
+{
+    private readonly IApplicationDbContext _context;
+    private readonly IPasswordService _passwordService;
+    private readonly IJwtTokenService _tokenService;
+
+    public async Task<RegisterResponse> Handle(RegisterCommand request, CancellationToken ct)
+    {
+        // 1. Check if email already exists
+        var existingUser = await _context.Users
+            .FirstOrDefaultAsync(u => u.Email == request.Email, ct);
+        if (existingUser != null)
+            throw new ValidationException("Email already registered");
+
+        // 2. Hash password
+        var passwordHash = _passwordService.HashPassword(request.Password);
+
+        // 3. Create user entity
+        var user = new User
+        {
+            Email = request.Email,
+            PasswordHash = passwordHash,
+            FullName = request.FullName,
+            Phone = request.Phone,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync(ct);
+
+        // 4. Migrate guest resumes if GuestSessionToken provided
+        if (!string.IsNullOrWhiteSpace(request.GuestSessionToken))
+        {
+            var guestResumes = await _context.Resumes
+                .Where(r => r.GuestSessionToken == request.GuestSessionToken)
+                .ToListAsync(ct);
+            
+            foreach (var resume in guestResumes)
+            {
+                resume.UserId = user.Id;
+                resume.GuestSessionToken = null;
+            }
+            
+            await _context.SaveChangesAsync(ct);
+        }
+
+        // 5. Generate JWT token
+        var token = _tokenService.GenerateToken(user.Id, user.Email, user.FullName);
+
+        return new RegisterResponse(user.Id, token, guestResumes.Count);
+    }
+}
+```
+
+### API Endpoints
+
+**AuthController** (`backend/src/CVAnalyzer.API/Controllers/AuthController.cs`):
+
+- `POST /api/auth/register` - Register new user (anonymous)
+  - Request: `{ email, password, fullName, phone?, guestSessionToken? }`
+  - Response: `{ userId, token, migratedResumeCount }`
+  - Returns 201 Created on success, 400 if validation fails
+
+- `POST /api/auth/login` - Authenticate user (anonymous)
+  - Request: `{ email, password }`
+  - Response: `{ userId, token }`
+  - Returns 200 OK on success, 401 if credentials invalid
+
+- `POST /api/auth/logout` - Logout user (authenticated)
+  - No request body needed (JWT in Authorization header)
+  - Returns 200 OK (stateless JWT, no server-side action)
+
+- `GET /api/auth/profile` - Get user profile (authenticated)
+  - Requires `Authorization: Bearer <token>` header
+  - Response: `{ userId, email, fullName, phone, createdAt, lastLoginAt }`
+  - Returns 200 OK with profile, 401 if token invalid/expired
+
+### Frontend Integration
+
+**Auth Service** (`frontend/src/app/core/services/auth.service.ts`):
+- Stores JWT token in `localStorage` (key: `auth_token`)
+- Provides observables for auth state: `isAuthenticated$`, `currentUser$`
+- Auto-injects token in HTTP requests via interceptor
+
+**Auth Guard** (`frontend/src/app/core/guards/auth.guard.ts`):
+- Protects routes requiring authentication (e.g., `/dashboard`)
+- Redirects to `/login` if user not authenticated
+- Passes JWT token validation to backend
+
+**Auth Components**:
+- `LoginComponent` (`frontend/src/app/features/auth/login/`)
+- `RegisterComponent` (`frontend/src/app/features/auth/register/`)
+- `DashboardComponent` (`frontend/src/app/features/dashboard/`) - Protected route
+
+### Configuration
+
+**Backend** (`backend/src/CVAnalyzer.API/appsettings.json`):
+```json
+{
+  "Jwt": {
+    "SecretKey": "YOUR_SECRET_KEY_HERE_MINIMUM_32_CHARACTERS",
+    "Issuer": "cv-analyzer-api",
+    "Audience": "cv-analyzer-frontend",
+    "ExpirationMinutes": 60
+  }
+}
+```
+
+**CRITICAL**: Never commit real `SecretKey` values. Use Key Vault in production.
+
+**Program.cs Configuration**:
+```csharp
+// JWT Authentication (backend/src/CVAnalyzer.API/Program.cs)
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
+            ClockSkew = TimeSpan.Zero  // No tolerance for expired tokens
+        };
+    });
+```
+
+### Guest Session Migration Flow
+
+**Use Case**: Anonymous user uploads resume, then registers later
+
+**Flow**:
+1. Frontend generates `uuid` for guest session, stores in `localStorage`
+2. Guest uploads resume → Backend saves with `GuestSessionToken` (no `UserId`)
+3. Guest registers → Frontend sends `GuestSessionToken` in registration request
+4. Backend migrates all resumes with matching `GuestSessionToken` to new user
+5. Frontend clears guest token, stores JWT token
+
+**Implementation**:
+```typescript
+// frontend/src/app/core/services/session.service.ts
+export class SessionService {
+  getOrCreateGuestToken(): string {
+    let token = localStorage.getItem('guest_session_token');
+    if (!token) {
+      token = crypto.randomUUID();
+      localStorage.setItem('guest_session_token', token);
+    }
+    return token;
+  }
+
+  clearGuestToken(): void {
+    localStorage.removeItem('guest_session_token');
+  }
+}
+```
+
+### Common Patterns
+
+**Protected Backend Endpoint**:
+```csharp
+[Authorize]
+[HttpGet("my-resumes")]
+public async Task<ActionResult<List<ResumeDto>>> GetMyResumes()
+{
+    var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (string.IsNullOrEmpty(userId))
+        return Unauthorized();
+
+    var query = new GetUserResumesQuery(Guid.Parse(userId));
+    var resumes = await _mediator.Send(query);
+    return Ok(resumes);
+}
+```
+
+**Protected Frontend Route**:
+```typescript
+// frontend/src/app/app.routes.ts
+export const routes: Routes = [
+  {
+    path: 'dashboard',
+    loadComponent: () => import('./features/dashboard/dashboard.component'),
+    canActivate: [authGuard]  // Requires authentication
+  }
+];
+```
+
+**Extracting User from JWT**:
+```csharp
+// In handler or controller
+var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+var userId = Guid.Parse(userIdClaim!);
+```
+
+### Known Limitations & Planned Improvements
+
+**Missing Features** (see `NEXT_STEPS_USER_STORY_2.md`):
+- ❌ Email verification system (Azure Communication Services)
+- ❌ Password reset/forgot password flow
+- ❌ Account lockout after failed login attempts
+- ❌ Refresh tokens (currently only 60-min access tokens)
+- ❌ Role-based authorization (all authenticated users have same permissions)
+- ❌ Post-analysis registration prompt dialog
+
+**Current Workarounds**:
+- Email verification: Users can register without email confirmation (dev mode only)
+- Password reset: Must be handled manually (admin intervention)
+- Expired tokens: Users must log in again (no refresh token)
+
+### Security Best Practices
+
+- ✅ Passwords hashed with BCrypt (never stored in plain text)
+- ✅ JWT tokens signed with HMAC-SHA256 (symmetric key)
+- ✅ Token expiration enforced (no `ClockSkew` tolerance)
+- ✅ HTTPS enforced in production (Azure Container Apps)
+- ✅ CORS configured per environment (dev: allow all, prod: specific origin)
+- ✅ Input validation via FluentValidation (email format, password length, etc.)
+- ⚠️ JWT SecretKey must be at least 256 bits (32 characters) - enforced at startup
+
+### Testing Authentication
+
+**Manual Testing** (`backend/test-auth-api.ps1`):
+```powershell
+# Register user
+$registerResponse = Invoke-RestMethod -Uri "http://localhost:5000/api/auth/register" `
+    -Method POST -ContentType "application/json" `
+    -Body '{"email":"test@example.com","password":"Test123!@#","fullName":"Test User"}'
+
+# Login
+$loginResponse = Invoke-RestMethod -Uri "http://localhost:5000/api/auth/login" `
+    -Method POST -ContentType "application/json" `
+    -Body '{"email":"test@example.com","password":"Test123!@#"}'
+
+# Get profile (with token)
+$token = $loginResponse.token
+$headers = @{ Authorization = "Bearer $token" }
+$profile = Invoke-RestMethod -Uri "http://localhost:5000/api/auth/profile" `
+    -Method GET -Headers $headers
+```
+
+**Unit Tests** (`backend/tests/CVAnalyzer.UnitTests/Features/Auth/`):
+- `RegisterCommandValidatorTests` - Email format, password strength, required fields
+- `LoginCommandValidatorTests` - Email/password presence
+- `JwtTokenServiceTests` - Token generation, validation, claim extraction
+- `PasswordServiceTests` - Hashing, verification
+
+### Key Files for Reference
+
+| Purpose | File Path |
+|---------|-----------|
+| JWT token generation | `backend/src/CVAnalyzer.Infrastructure/Authentication/JwtTokenService.cs` |
+| Password hashing | `backend/src/CVAnalyzer.Infrastructure/Authentication/PasswordService.cs` |
+| User entity | `backend/src/CVAnalyzer.Domain/Entities/User.cs` |
+| Register command | `backend/src/CVAnalyzer.Application/Features/Auth/Commands/RegisterCommand.cs` |
+| Login command | `backend/src/CVAnalyzer.Application/Features/Auth/Commands/LoginCommand.cs` |
+| Auth controller | `backend/src/CVAnalyzer.API/Controllers/AuthController.cs` |
+| Auth service (frontend) | `frontend/src/app/core/services/auth.service.ts` |
+| Auth guard (frontend) | `frontend/src/app/core/guards/auth.guard.ts` |
+| Login component | `frontend/src/app/features/auth/login/login.component.ts` |
+| Register component | `frontend/src/app/features/auth/register/register.component.ts` |
+| Dashboard (protected) | `frontend/src/app/features/dashboard/dashboard.component.ts` |
 
 ---
 

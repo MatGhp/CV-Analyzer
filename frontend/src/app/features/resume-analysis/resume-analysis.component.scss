@@ -152,6 +152,72 @@
   font-weight: 600;
 }
 
+// Guest User Registration CTA
+.registration-cta {
+  background: linear-gradient(135deg, hsl(var(--p) / 0.1) 0%, hsl(var(--s) / 0.1) 100%);
+  border: 2px solid hsl(var(--p) / 0.3);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin: 0.5rem 0;
+
+  .cta-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      text-align: left;
+    }
+  }
+
+  .cta-icon {
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    background: hsl(var(--p));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: hsl(var(--pc));
+  }
+
+  .cta-text {
+    flex: 1;
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: hsl(var(--bc));
+      margin: 0 0 0.5rem 0;
+    }
+
+    p {
+      font-size: 0.9rem;
+      color: hsl(var(--bc) / 0.7);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .warning-text {
+      color: hsl(var(--wa));
+      font-weight: 500;
+      margin-top: 0.5rem;
+    }
+  }
+
+  .btn-lg {
+    padding: 0.875rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
 .summary {
   display: flex;
   flex-direction: column;

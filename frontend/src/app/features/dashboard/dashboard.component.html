@@ -79,7 +79,7 @@
           <div class="stat-icon">🕒</div>
           <div class="stat-content">
             @if (resumes().length > 0) {
-              <h3>{{ formatDate(resumes()[0]?.uploadDate || '') }}</h3>
+              <h3>{{ formatDate(resumes()[0]?.uploadedAt || '') }}</h3>
               <p>Last Analysis</p>
             } @else {
               <h3>-</h3>
@@ -111,19 +111,19 @@
         <!-- Resume Cards -->
         @if (resumes().length > 0) {
           <div class="resumes-grid">
-            @for (resume of resumes(); track resume.id) {
+            @for (resume of resumes(); track resume.resumeId) {
               <div class="resume-card">
                 <div class="resume-header">
                   <div class="resume-icon">📄</div>
                   <div class="resume-title">
                     <h3>{{ resume.fileName }}</h3>
-                    <p class="resume-date">{{ formatDate(resume.uploadDate) }}</p>
+                    <p class="resume-date">{{ formatDate(resume.uploadedAt) }}</p>
                   </div>
                 </div>
                 <div class="resume-body">
                   <div class="score-container">
-                    <div class="score-circle" [ngClass]="getScoreClass(resume.analysisScore)">
-                      <span class="score-value">{{ resume.analysisScore }}</span>
+                    <div class="score-circle" [ngClass]="getScoreClass(resume.score || 0)">
+                      <span class="score-value">{{ resume.score || 0 }}</span>
                       <span class="score-max">/100</span>
                     </div>
                     <span class="score-label">ATS Score</span>
@@ -135,8 +135,11 @@
                   </div>
                 </div>
                 <div class="resume-actions">
-                  <button class="btn-view" (click)="viewResumeDetails(resume.id)">
+                  <button class="btn-view" (click)="viewResumeDetails(resume.resumeId)">
                     View Details →
+                  </button>
+                  <button class="btn-delete" (click)="deleteResume(resume.resumeId, $event)" title="Delete resume">
+                    🗑️
                   </button>
                 </div>
               </div>

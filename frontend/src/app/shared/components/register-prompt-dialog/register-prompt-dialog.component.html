@@ -1,0 +1,116 @@
+<div 
+  class="modal-overlay" 
+  [class.closing]="isClosing()"
+  (click)="onOverlayClick($event)"
+  (keydown)="onKeydown($event)"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="dialog-title"
+  tabindex="-1">
+  
+  <div class="modal-content" role="document">
+    <!-- Header with icon -->
+    <div class="modal-header">
+      <div class="success-icon">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h2 id="dialog-title" class="modal-title">Great Results! 🎉</h2>
+      <p class="modal-subtitle">Your resume scored <strong>{{ score ?? 0 }}</strong> out of 100</p>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+      <p class="main-message">
+        Want to <strong>save your analysis</strong> and track improvements over time?
+      </p>
+
+      <!-- Candidate preview -->
+      @if (candidateInfo) {
+        <div class="candidate-preview">
+          <div class="preview-header">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span>We'll pre-fill your info:</span>
+          </div>
+          <div class="preview-details">
+            @if (candidateInfo.fullName) {
+              <span class="detail-item">
+                <strong>Name:</strong> {{ candidateInfo.fullName }}
+              </span>
+            }
+            @if (candidateInfo.email) {
+              <span class="detail-item">
+                <strong>Email:</strong> {{ candidateInfo.email }}
+              </span>
+            }
+            @if (candidateInfo.phone) {
+              <span class="detail-item">
+                <strong>Phone:</strong> {{ candidateInfo.phone }}
+              </span>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Benefits list -->
+      <div class="benefits-list">
+        <h4>With a free account, you can:</h4>
+        <ul>
+          <li>
+            <svg class="check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Save all your resume analyses
+          </li>
+          <li>
+            <svg class="check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Track score improvements over time
+          </li>
+          <li>
+            <svg class="check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Access your results anytime
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Footer with actions -->
+    <div class="modal-footer">
+      <button 
+        type="button" 
+        class="btn btn-primary"
+        (click)="onRegister()">
+        <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+        </svg>
+        Yes, Create Account
+      </button>
+      
+      <button 
+        type="button" 
+        class="btn btn-ghost"
+        (click)="onContinueAsGuest()">
+        Continue as Guest
+      </button>
+    </div>
+
+    <!-- Warning notice -->
+    <div class="warning-notice">
+      <svg class="warning-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+      <span>Guest data expires in <strong>24 hours</strong></span>
+    </div>
+  </div>
+</div>

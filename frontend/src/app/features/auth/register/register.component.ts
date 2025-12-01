@@ -1,7 +1,7 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { RegisterRequest } from '../../../core/models/auth.model';
 
@@ -12,14 +12,16 @@ import { RegisterRequest } from '../../../core/models/auth.model';
   templateUrl: './register.component.html',
   styleUrl: './register.component.scss'
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
   hasGuestData = computed(() => !!this.authService.getGuestSessionToken());
+  resumeId = signal<string | null>(null);
 
   registerForm = this.fb.group({
     fullName: ['', [Validators.required, Validators.maxLength(200)]],
@@ -28,6 +30,24 @@ export class RegisterComponent {
     password: ['', [Validators.required, Validators.minLength(8), this.passwordValidator]],
     confirmPassword: ['', [Validators.required]]
   }, { validators: this.passwordMatchValidator });
+
+  ngOnInit(): void {
+    // Prefill form from query params (when coming from analysis page)
+    const params = this.route.snapshot.queryParams;
+    
+    if (params['prefillName']) {
+      this.registerForm.patchValue({ fullName: params['prefillName'] });
+    }
+    if (params['prefillEmail']) {
+      this.registerForm.patchValue({ email: params['prefillEmail'] });
+    }
+    if (params['prefillPhone']) {
+      this.registerForm.patchValue({ phone: params['prefillPhone'] });
+    }
+    if (params['resumeId']) {
+      this.resumeId.set(params['resumeId']);
+    }
+  }
 
   onSubmit(): void {
     if (this.registerForm.invalid) {
@@ -57,6 +77,8 @@ export class RegisterComponent {
           console.log(`Migrated ${response.migratedResumeCount} guest resume(s)`);
         }
         
+        // Always redirect to dashboard after registration
+        // User can view their migrated resume from there
         this.router.navigate(['/dashboard']);
       },
       error: (error) => {

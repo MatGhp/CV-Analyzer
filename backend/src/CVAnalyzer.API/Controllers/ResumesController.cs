@@ -1,6 +1,7 @@
 using CVAnalyzer.Application.Features.Resumes.Commands;
 using CVAnalyzer.Application.Features.Resumes.Queries;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CVAnalyzer.API.Controllers;
@@ -72,5 +73,30 @@ public class ResumesController : ControllerBase
         }
 
         return Ok(resume);
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim))
+        {
+            return Unauthorized();
+        }
+
+        var command = new DeleteResumeCommand(id, userIdClaim);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (!result)
+        {
+            return NotFound();
+        }
+
+        _logger.LogInformation("Deleted resume {ResumeId} by user {UserId}", id, userIdClaim);
+        return NoContent();
     }
 }
