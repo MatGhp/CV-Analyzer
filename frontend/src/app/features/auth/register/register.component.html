@@ -1,0 +1,121 @@
+<div class="register-container">
+  <div class="register-card">
+    <div class="register-header">
+      <h1>Create Account</h1>
+      <p>Join CV Analyzer to save and manage your resumes</p>
+    </div>
+
+    @if (hasGuestData()) {
+      <div class="alert alert-info">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <span>Your guest resumes will be automatically transferred to your new account!</span>
+      </div>
+    }
+
+    @if (errorMessage()) {
+      <div class="alert alert-error">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+      <div class="form-group">
+        <label for="fullName">Full Name</label>
+        <input
+          type="text"
+          id="fullName"
+          formControlName="fullName"
+          placeholder="John Doe"
+          [class.error]="getFieldError('fullName')"
+        />
+        @if (getFieldError('fullName')) {
+          <span class="error-message">{{ getFieldError('fullName') }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input
+          type="email"
+          id="email"
+          formControlName="email"
+          placeholder="your.email@example.com"
+          [class.error]="getFieldError('email')"
+        />
+        @if (getFieldError('email')) {
+          <span class="error-message">{{ getFieldError('email') }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Phone (Optional)</label>
+        <input
+          type="tel"
+          id="phone"
+          formControlName="phone"
+          placeholder="+1234567890"
+          [class.error]="getFieldError('phone')"
+        />
+        @if (getFieldError('phone')) {
+          <span class="error-message">{{ getFieldError('phone') }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          placeholder="Min. 8 characters"
+          [class.error]="getFieldError('password')"
+        />
+        @if (getFieldError('password')) {
+          <span class="error-message">{{ getFieldError('password') }}</span>
+        } @else if (registerForm.get('password')?.touched) {
+          <span class="info-message">
+            Must contain uppercase, lowercase, digit, and special character (@$!%*?&)
+          </span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          formControlName="confirmPassword"
+          placeholder="Re-enter your password"
+          [class.error]="getFieldError('confirmPassword')"
+        />
+        @if (getFieldError('confirmPassword')) {
+          <span class="error-message">{{ getFieldError('confirmPassword') }}</span>
+        }
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn-primary btn-block"
+        [disabled]="isLoading()"
+      >
+        @if (isLoading()) {
+          <span class="spinner"></span>
+          Creating account...
+        } @else {
+          Create Account
+        }
+      </button>
+    </form>
+
+    <div class="register-footer">
+      <p>
+        Already have an account?
+        <a routerLink="/login">Sign in</a>
+      </p>
+    </div>
+  </div>
+</div>

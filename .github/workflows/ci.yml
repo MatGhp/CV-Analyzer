@@ -59,6 +59,40 @@ jobs:
       run: dotnet build --no-restore --configuration Release
       working-directory: backend
 
+    - name: Backend - Configure Test Environment
+      run: |
+        cat > backend/src/CVAnalyzer.API/appsettings.Testing.json << 'EOF'
+        {
+          "Serilog": {
+            "MinimumLevel": {
+              "Default": "Warning"
+            }
+          },
+          "ConnectionStrings": {
+            "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=CVAnalyzerTestDb;Trusted_Connection=True;"
+          },
+          "UseKeyVault": false,
+          "Jwt": {
+            "SecretKey": "CI_TEST_SECRET_KEY_FOR_GITHUB_ACTIONS_MUST_BE_AT_LEAST_32_CHARACTERS_LONG",
+            "Issuer": "cv-analyzer-api-test",
+            "Audience": "cv-analyzer-frontend-test",
+            "ExpirationMinutes": 60
+          },
+          "AzureStorage": {
+            "ConnectionString": "UseDevelopmentStorage=true"
+          },
+          "Agent": {
+            "Endpoint": "https://test.openai.azure.com/",
+            "Deployment": "gpt-4o-test",
+            "ApiKey": "test-api-key"
+          },
+          "DocumentIntelligence": {
+            "Endpoint": "https://test.cognitiveservices.azure.com/",
+            "ApiKey": "test-key"
+          }
+        }
+        EOF
+
     - name: Backend - Test
       run: dotnet test --no-build --verbosity normal --configuration Release
       working-directory: backend

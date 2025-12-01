@@ -1,7 +1,22 @@
 services:
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    ports:
+      - "10000:10000"  # Blob service
+      - "10001:10001"  # Queue service
+      - "10002:10002"  # Table service
+    networks:
+      - cvanalyzer-network
+
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.local
     environment:
       - API_FQDN=  # Remove API_FQDN requirement for local
+  
+  api:
+    environment:
+      - AzureStorage__ConnectionString=${AZURE_STORAGE_CONNECTION_STRING}
+      - Agent__ApiKey=${AGENT_API_KEY}
+      - DocumentIntelligence__ApiKey=${DOCUMENT_INTELLIGENCE_API_KEY}

@@ -1,0 +1,149 @@
+<div class="dashboard-container">
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading your dashboard...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error() && !loading()) {
+    <div class="error-state">
+      <p class="error-message">{{ error() }}</p>
+      <button class="btn-retry" (click)="loadUserData()">Retry</button>
+    </div>
+  }
+
+  <!-- Dashboard Content -->
+  @if (!loading() && !error() && profile()) {
+    <div class="dashboard-content">
+      <!-- Header Section -->
+      <header class="dashboard-header">
+        <div class="welcome-section">
+          <h1>Welcome back, {{ profile()?.fullName || 'User' }}!</h1>
+          <p class="subtitle">Manage your resume analyses and profile</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-secondary" (click)="uploadNewResume()">
+            <span class="icon">📤</span> Upload New Resume
+          </button>
+          <button class="btn-logout" (click)="logout()">
+            <span class="icon">🚪</span> Logout
+          </button>
+        </div>
+      </header>
+
+      <!-- User Profile Card -->
+      <section class="profile-section">
+        <div class="profile-card">
+          <div class="profile-avatar">
+            <span class="avatar-initial">{{ profile()?.fullName?.charAt(0) || 'U' }}</span>
+          </div>
+          <div class="profile-info">
+            <h2>{{ profile()?.fullName }}</h2>
+            <p class="profile-email">{{ profile()?.email }}</p>
+            @if (profile()?.phone) {
+              <p class="profile-phone">{{ profile()?.phone }}</p>
+            }
+            <div class="profile-meta">
+              <span class="meta-item">
+                <span class="icon">📅</span> Joined {{ formatDate(profile()?.createdAt || '') }}
+              </span>
+              <span class="meta-item" [class.verified]="profile()?.isEmailVerified">
+                <span class="icon">{{ profile()?.isEmailVerified ? '✅' : '⚠️' }}</span>
+                {{ profile()?.isEmailVerified ? 'Email Verified' : 'Email Not Verified' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Statistics Section -->
+      <section class="statistics-section">
+        <div class="stat-card">
+          <div class="stat-icon">📄</div>
+          <div class="stat-content">
+            <h3>{{ resumes().length }}</h3>
+            <p>Total Resumes</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-content">
+            <h3>{{ getAverageScore() }}%</h3>
+            <p>Average Score</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🕒</div>
+          <div class="stat-content">
+            @if (resumes().length > 0) {
+              <h3>{{ formatDate(resumes()[0]?.uploadDate || '') }}</h3>
+              <p>Last Analysis</p>
+            } @else {
+              <h3>-</h3>
+              <p>No Analyses Yet</p>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- Resumes Section -->
+      <section class="resumes-section">
+        <div class="section-header">
+          <h2>Your Resume Analyses</h2>
+          <span class="resume-count">{{ resumes().length }} total</span>
+        </div>
+
+        <!-- Empty State -->
+        @if (resumes().length === 0) {
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <h3>No resumes yet</h3>
+            <p>Upload your first resume to get started with AI-powered analysis!</p>
+            <button class="btn-primary" (click)="uploadNewResume()">
+              Upload Resume
+            </button>
+          </div>
+        }
+
+        <!-- Resume Cards -->
+        @if (resumes().length > 0) {
+          <div class="resumes-grid">
+            @for (resume of resumes(); track resume.id) {
+              <div class="resume-card">
+                <div class="resume-header">
+                  <div class="resume-icon">📄</div>
+                  <div class="resume-title">
+                    <h3>{{ resume.fileName }}</h3>
+                    <p class="resume-date">{{ formatDate(resume.uploadDate) }}</p>
+                  </div>
+                </div>
+                <div class="resume-body">
+                  <div class="score-container">
+                    <div class="score-circle" [ngClass]="getScoreClass(resume.analysisScore)">
+                      <span class="score-value">{{ resume.analysisScore }}</span>
+                      <span class="score-max">/100</span>
+                    </div>
+                    <span class="score-label">ATS Score</span>
+                  </div>
+                  <div class="resume-status">
+                    <span class="status-badge" [class.status-complete]="resume.status === 'Completed'">
+                      {{ resume.status }}
+                    </span>
+                  </div>
+                </div>
+                <div class="resume-actions">
+                  <button class="btn-view" (click)="viewResumeDetails(resume.id)">
+                    View Details →
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
+    </div>
+  }
+</div>

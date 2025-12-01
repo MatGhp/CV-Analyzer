@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet ef migrations list:*)",
+      "Bash(test:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(curl:*)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File test-features.ps1)",
+      "Bash(powershell.exe -Command \"Get-Content test-features.ps1 | Select-String -Pattern ''}'' -Context 1,1 | Select-Object -Last 5\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

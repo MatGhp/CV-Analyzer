@@ -8,30 +8,112 @@
 .app-header {
   background: hsl(var(--b1));
   border-bottom: 1px solid hsl(var(--bc) / 0.1);
-  padding: 2rem 1.5rem;
+  padding: 1.5rem;
 }
 
 .header-content {
   max-width: 64rem;
   margin: 0 auto;
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.header-left {
+  flex: 1;
 }
 
 .app-title {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
   color: hsl(var(--bc));
-  margin: 0 0 0.5rem;
-  background: linear-gradient(135deg, hsl(var(--p)), hsl(var(--s)));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  margin: 0 0 0.25rem;
+  
+  .title-link {
+    text-decoration: none;
+    background: linear-gradient(135deg, hsl(var(--p)), hsl(var(--s)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: opacity 0.2s;
+    
+    &:hover {
+      opacity: 0.8;
+    }
+  }
 }
 
 .app-subtitle {
-  font-size: 1.125rem;
+  font-size: 0.875rem;
   color: hsl(var(--bc) / 0.7);
   margin: 0;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+}
+
+.user-menu,
+.guest-menu {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-greeting {
+  color: hsl(var(--bc) / 0.8);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.nav-link {
+  color: hsl(var(--bc) / 0.7);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  
+  &:hover {
+    color: hsl(var(--p));
+    background: hsl(var(--p) / 0.1);
+  }
+}
+
+.btn-logout {
+  background: transparent;
+  color: hsl(var(--bc) / 0.7);
+  border: 1px solid hsl(var(--bc) / 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: hsl(var(--bc) / 0.05);
+    border-color: hsl(var(--bc) / 0.3);
+  }
+}
+
+.btn-register {
+  background: linear-gradient(135deg, hsl(var(--p)), hsl(var(--s)));
+  color: white;
+  text-decoration: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px hsl(var(--p) / 0.3);
+  }
 }
 
 .app-main {
@@ -65,6 +147,46 @@
   text-align: center;
   color: hsl(var(--bc) / 0.6);
   font-size: 0.875rem;
+}
+
+// Responsive Design - Mobile Navigation
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .header-left {
+    width: 100%;
+  }
+  
+  .app-title {
+    font-size: 1.5rem;
+  }
+  
+  .app-subtitle {
+    font-size: 0.75rem;
+  }
+  
+  .header-nav {
+    width: 100%;
+  }
+  
+  .user-menu,
+  .guest-menu {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .user-greeting {
+    width: 100%;
+    margin-bottom: 0.25rem;
+  }
+  
+  .app-main {
+    padding: 2rem 1rem;
+  }
 }
 
 .app-footer p {

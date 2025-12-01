@@ -1,0 +1,23 @@
+# GitLeaks Configuration
+# This file configures what GitLeaks should ignore
+
+[allowlist]
+description = "Allowlist for known safe values"
+
+# Azurite Storage Emulator - Standard well-known key for local development
+# This is publicly documented at: https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite
+# Test API keys and placeholders
+regexes = [
+    '''Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==''',
+    '''devstoreaccount1''',
+    '''UseDevelopmentStorage=true''',
+    '''test-key-for-local-dev''',
+    '''<PASSWORD_PLACEHOLDER>''',
+    '''YOUR_API_KEY_HERE''',
+    '''YOUR_PASSWORD_HERE''',
+]
+
+# Additional allowlist for specific paths
+paths = [
+    '''\.gitleaks\.toml''',
+]

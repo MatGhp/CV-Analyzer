@@ -144,6 +144,12 @@ namespace CVAnalyzer.Infrastructure.Migrations
                     b.Property<DateTime?>("AnalyzedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("AnonymousExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("AuthenticatedUserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("BlobUrl")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -160,6 +166,9 @@ namespace CVAnalyzer.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<bool>("IsAnonymous")
+                        .HasColumnType("bit");
 
                     b.Property<string>("OptimizedContent")
                         .HasColumnType("nvarchar(max)");
@@ -179,6 +188,8 @@ namespace CVAnalyzer.Infrastructure.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AuthenticatedUserId");
 
                     b.HasIndex("CreatedAt");
 
@@ -222,6 +233,47 @@ namespace CVAnalyzer.Infrastructure.Migrations
                     b.ToTable("Suggestions");
                 });
 
+            modelBuilder.Entity("CVAnalyzer.Domain.Entities.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsEmailVerified")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Users");
+                });
+
             modelBuilder.Entity("CVAnalyzer.Domain.Entities.CandidateInfo", b =>
                 {
                     b.HasOne("CVAnalyzer.Domain.Entities.Resume", "Resume")
@@ -231,6 +283,16 @@ namespace CVAnalyzer.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Resume");
+                });
+
+            modelBuilder.Entity("CVAnalyzer.Domain.Entities.Resume", b =>
+                {
+                    b.HasOne("CVAnalyzer.Domain.Entities.User", "AuthenticatedUser")
+                        .WithMany("Resumes")
+                        .HasForeignKey("AuthenticatedUserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("AuthenticatedUser");
                 });
 
             modelBuilder.Entity("CVAnalyzer.Domain.Entities.Suggestion", b =>
@@ -249,6 +311,11 @@ namespace CVAnalyzer.Infrastructure.Migrations
                     b.Navigation("CandidateInfo");
 
                     b.Navigation("Suggestions");
+                });
+
+            modelBuilder.Entity("CVAnalyzer.Domain.Entities.User", b =>
+                {
+                    b.Navigation("Resumes");
                 });
 #pragma warning restore 612, 618
         }

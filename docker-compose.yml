@@ -35,12 +35,12 @@ services:
       # See LOCAL_DEV_SECRETS.md for Azure CLI commands to get values
       # ========================================
       - AzureStorage__ConnectionString=${AZURE_STORAGE_CONNECTION_STRING}
-      - Agent__Endpoint=https://ai-cvanalyzer-dev.openai.azure.com/
+      - Agent__Endpoint=https://swedencentral.api.cognitive.microsoft.com/
       - Agent__Deployment=gpt-4o
       - Agent__ApiKey=${AGENT_API_KEY}
       - Agent__Temperature=0.7
       - Agent__TopP=0.95
-      - DocumentIntelligence__Endpoint=https://cvanalyzer-dev-docintel.cognitiveservices.azure.com/
+      - DocumentIntelligence__Endpoint=https://swedencentral.api.cognitive.microsoft.com/
       - DocumentIntelligence__ApiKey=${DOCUMENT_INTELLIGENCE_API_KEY}
     depends_on:
       - sqlserver

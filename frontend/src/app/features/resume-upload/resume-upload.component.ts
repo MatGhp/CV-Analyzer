@@ -68,16 +68,20 @@ export class ResumeUploadComponent {
 
   /**
    * Get or generate user ID for resume upload
-   * TODO: Replace with actual authentication once implemented
-   * For now, generates a session-based ID stored in localStorage
+   * For anonymous users: generates session token (guest-{timestamp}-{random12chars})
+   * For authenticated users: returns actual user ID from auth service
+   * TODO: Check auth service when authentication is implemented
    */
   private getUserId(): string {
     const storageKey = 'cv-analyzer-session-id';
     let userId = localStorage.getItem(storageKey);
     
     if (!userId) {
-      // Generate a simple session ID (in production, use proper auth)
-      userId = `guest-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      // Generate session token matching backend format: guest-{timestamp}-{random12}
+      const timestamp = Date.now();
+      // Use crypto.randomUUID for proper random generation (12 alphanumeric chars)
+      const random12 = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
+      userId = `guest-${timestamp}-${random12}`;
       localStorage.setItem(storageKey, userId);
     }
     

@@ -1,0 +1,64 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <h1>Welcome Back</h1>
+      <p>Sign in to your CV Analyzer account</p>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="alert alert-error">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input
+          type="email"
+          id="email"
+          formControlName="email"
+          placeholder="your.email@example.com"
+          [class.error]="getFieldError('email')"
+        />
+        @if (getFieldError('email')) {
+          <span class="error-message">{{ getFieldError('email') }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          placeholder="Enter your password"
+          [class.error]="getFieldError('password')"
+        />
+        @if (getFieldError('password')) {
+          <span class="error-message">{{ getFieldError('password') }}</span>
+        }
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn-primary btn-block"
+        [disabled]="isLoading()"
+      >
+        @if (isLoading()) {
+          <span class="spinner"></span>
+          Signing in...
+        } @else {
+          Sign In
+        }
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <p>
+        Don't have an account?
+        <a routerLink="/register">Create one now</a>
+      </p>
+    </div>
+  </div>
+</div>

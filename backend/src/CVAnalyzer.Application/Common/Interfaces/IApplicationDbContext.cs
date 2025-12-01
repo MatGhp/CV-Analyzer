@@ -10,6 +10,7 @@ public interface IApplicationDbContext
     DbSet<Suggestion> Suggestions { get; }
     DbSet<CandidateInfo> CandidateInfos { get; }
     DbSet<PromptTemplate> PromptTemplates { get; }
+    DbSet<User> Users { get; }
     DatabaseFacade Database { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
