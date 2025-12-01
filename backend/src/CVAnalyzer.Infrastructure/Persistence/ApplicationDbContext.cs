@@ -14,6 +14,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Suggestion> Suggestions => Set<Suggestion>();
     public DbSet<CandidateInfo> CandidateInfos => Set<CandidateInfo>();
     public DbSet<PromptTemplate> PromptTemplates => Set<PromptTemplate>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +44,34 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<Resume>(entity =>
         {
             entity.HasIndex(e => e.UserId);
+            
+            entity.HasOne(e => e.AuthenticatedUser)
+                .WithMany(u => u.Resumes)
+                .HasForeignKey(e => e.AuthenticatedUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Email)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            entity.Property(e => e.FullName)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            entity.Property(e => e.PasswordHash)
+                .IsRequired();
+
+            entity.Property(e => e.Phone)
+                .HasMaxLength(50);
+
+            // Unique constraint on email (used for login)
+            entity.HasIndex(e => e.Email)
+                .IsUnique();
         });
 
         modelBuilder.Entity<PromptTemplate>(entity =>

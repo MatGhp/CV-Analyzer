@@ -62,8 +62,12 @@ public class AnonymousDataCleanupService : BackgroundService
         while (true)
         {
             // Find up to batchSize expired anonymous resumes (batch processing for memory efficiency)
+            // Exclude resumes that have been migrated to authenticated users (AuthenticatedUserId != null)
             var expiredResumes = await context.Resumes
-                .Where(r => r.IsAnonymous && r.AnonymousExpiresAt.HasValue && r.AnonymousExpiresAt.Value < cutoffDate)
+                .Where(r => r.IsAnonymous 
+                    && r.AnonymousExpiresAt.HasValue 
+                    && r.AnonymousExpiresAt.Value < cutoffDate
+                    && r.AuthenticatedUserId == null) // ✅ Don't delete migrated resumes
                 .Take(batchSize)
                 .ToListAsync(cancellationToken);
 

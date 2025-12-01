@@ -5,7 +5,9 @@ using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using CVAnalyzer.Application.Common.Interfaces;
+using CVAnalyzer.Application.Services;
 using CVAnalyzer.Domain.Repositories;
+using CVAnalyzer.Infrastructure.Authentication;
 using CVAnalyzer.Infrastructure.Options;
 using CVAnalyzer.Infrastructure.Persistence;
 using CVAnalyzer.Infrastructure.Services;
@@ -41,6 +43,10 @@ public static class DependencyInjection
         services.AddScoped<IDocumentIntelligenceService, DocumentIntelligenceService>();
         services.AddScoped<IAIResumeAnalyzerService, AIResumeAnalyzerService>();
         services.AddScoped<ISessionTokenService, SessionTokenService>();
+
+        // Authentication Services
+        services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         // Queue Service
         services.AddScoped<IResumeQueueService, ResumeQueueService>();

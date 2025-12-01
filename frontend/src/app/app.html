@@ -1,9 +1,33 @@
 <div class="app-container">
-  <!-- Header -->
+  <!-- Header with Navigation -->
   <header class="app-header">
     <div class="header-content">
-      <h1 class="app-title">{{ title }}</h1>
-      <p class="app-subtitle">Get instant AI-powered feedback to improve your resume</p>
+      <div class="header-left">
+        <h1 class="app-title">
+          <a routerLink="/" class="title-link">{{ title }}</a>
+        </h1>
+        <p class="app-subtitle">Get instant AI-powered feedback to improve your resume</p>
+      </div>
+      
+      <nav class="header-nav">
+        @if (authService.isAuthenticated()) {
+          <!-- Authenticated User Menu -->
+          <div class="user-menu">
+            <span class="user-greeting">
+              Hello, {{ authService.user()?.fullName || 'User' }}
+            </span>
+            <a routerLink="/dashboard" class="nav-link">Dashboard</a>
+            <a routerLink="/upload" class="nav-link">Upload Resume</a>
+            <button (click)="onLogout()" class="btn-logout">Logout</button>
+          </div>
+        } @else {
+          <!-- Guest User Menu -->
+          <div class="guest-menu">
+            <a routerLink="/login" class="nav-link">Login</a>
+            <a routerLink="/register" class="btn-register">Sign Up</a>
+          </div>
+        }
+      </nav>
     </div>
   </header>
 
