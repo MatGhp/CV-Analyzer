@@ -1,25 +1,30 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { Subscription, filter } from 'rxjs';
 
 interface Resume {
-  id: string;
+  resumeId: string;
   fileName: string;
-  uploadDate: string;
-  analysisScore: number;
+  score: number | null;
   status: string;
+  uploadedAt: string;
+  analyzedAt: string | null;
+  blobUrl: string | null;
 }
 
 interface UserProfile {
-  id: string;
+  userId: string;
   email: string;
   fullName: string;
-  phone: string;
+  phone: string | null;
   createdAt: string;
+  lastLoginAt: string | null;
   isEmailVerified: boolean;
+  totalResumes: number;
 }
 
 @Component({
@@ -29,10 +34,12 @@ interface UserProfile {
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   readonly authService = inject(AuthService);
+  private routerSubscription?: Subscription;
+  private isInitialLoad = true;
 
   resumes = signal<Resume[]>([]);
   profile = signal<UserProfile | null>(null);
@@ -40,7 +47,26 @@ export class DashboardComponent implements OnInit {
   error = signal<string | null>(null);
 
   ngOnInit(): void {
+    // Load data on initial load
     this.loadUserData();
+    
+    // Also reload data when navigating back to dashboard (skip initial)
+    this.routerSubscription = this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe((event) => {
+      const navEvent = event as NavigationEnd;
+      if (navEvent.urlAfterRedirects === '/dashboard') {
+        if (this.isInitialLoad) {
+          this.isInitialLoad = false;
+        } else {
+          this.loadUserData();
+        }
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.routerSubscription?.unsubscribe();
   }
 
   async loadUserData(): Promise<void> {
@@ -64,9 +90,9 @@ export class DashboardComponent implements OnInit {
   }
 
   getAverageScore(): number {
-    const validScores = this.resumes().filter(r => r.analysisScore > 0);
+    const validScores = this.resumes().filter(r => r.score !== null && r.score > 0);
     if (validScores.length === 0) return 0;
-    const sum = validScores.reduce((acc, r) => acc + r.analysisScore, 0);
+    const sum = validScores.reduce((acc, r) => acc + (r.score || 0), 0);
     return Math.round(sum / validScores.length);
   }
 
@@ -97,5 +123,22 @@ export class DashboardComponent implements OnInit {
 
   uploadNewResume(): void {
     this.router.navigate(['/']);
+  }
+
+  async deleteResume(resumeId: string, event: Event): Promise<void> {
+    event.stopPropagation(); // Prevent triggering viewResumeDetails
+    
+    if (!confirm('Are you sure you want to delete this resume and its analysis? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await this.http.delete(`${environment.apiUrl}/resumes/${resumeId}`).toPromise();
+      // Remove from local list
+      this.resumes.update(resumes => resumes.filter(r => r.resumeId !== resumeId));
+    } catch (err: any) {
+      console.error('Failed to delete resume:', err);
+      this.error.set('Failed to delete resume. Please try again.');
+    }
   }
 }

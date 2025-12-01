@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { FileUploadComponent } from '../../shared/components/file-upload.component';
 import { ResumeService } from '../../core/services/resume.service';
+import { AuthService } from '../../core/services/auth.service';
 import { ERROR_MESSAGES } from '../../core/constants/ui.constants';
 
 type UploadState = 'idle' | 'uploading' | 'success' | 'error';
@@ -18,6 +19,7 @@ type UploadState = 'idle' | 'uploading' | 'success' | 'error';
 export class ResumeUploadComponent {
   private readonly resumeService = inject(ResumeService);
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
 
   selectedFile = signal<File | null>(null);
   uploadState = signal<UploadState>('idle');
@@ -68,11 +70,21 @@ export class ResumeUploadComponent {
 
   /**
    * Get or generate user ID for resume upload
-   * For anonymous users: generates session token (guest-{timestamp}-{random12chars})
    * For authenticated users: returns actual user ID from auth service
-   * TODO: Check auth service when authentication is implemented
+   * For anonymous users: generates session token (guest-{timestamp}-{random12chars})
    */
   private getUserId(): string {
+    // Check if user is authenticated first
+    if (this.authService.isAuthenticated()) {
+      try {
+        return this.authService.getCurrentUserId();
+      } catch (error) {
+        console.warn('Failed to get authenticated user ID, falling back to guest ID:', error);
+        // Fall through to guest ID if something goes wrong
+      }
+    }
+    
+    // For guest users, use session storage
     const storageKey = 'cv-analyzer-session-id';
     let userId = localStorage.getItem(storageKey);
     

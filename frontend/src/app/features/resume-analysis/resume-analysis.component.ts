@@ -4,14 +4,16 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AnalysisResponse, SuggestionDto, ResumeStatusResponse } from '../../core/models/resume.model';
 import { ResumeService } from '../../core/services/resume.service';
+import { AuthService } from '../../core/services/auth.service';
 import { CandidateInfoCardComponent } from '../../shared/components/candidate-info-card/candidate-info-card.component';
 import { SaveResultsBannerComponent } from '../../shared/components/save-results-banner/save-results-banner.component';
+import { RegisterPromptDialogComponent } from '../../shared/components/register-prompt-dialog/register-prompt-dialog.component';
 import { UI_TIMING, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../../core/constants/ui.constants';
 
 @Component({
   selector: 'app-resume-analysis',
   standalone: true,
-  imports: [CommonModule, CandidateInfoCardComponent, SaveResultsBannerComponent],
+  imports: [CommonModule, CandidateInfoCardComponent, SaveResultsBannerComponent, RegisterPromptDialogComponent],
   templateUrl: './resume-analysis.component.html',
   styleUrl: './resume-analysis.component.scss'
 })
@@ -19,6 +21,7 @@ export class ResumeAnalysisComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly resumeService = inject(ResumeService);
+  private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
 
   resumeId = signal<string>('');
@@ -27,6 +30,7 @@ export class ResumeAnalysisComponent implements OnInit {
   isLoading = signal<boolean>(true);
   errorMessage = signal<string | null>(null);
   isAnonymous = signal<boolean>(false);
+  showRegisterDialog = signal<boolean>(false);
 
   showOptimized = signal(false);
   copied = signal(false);
@@ -91,9 +95,27 @@ export class ResumeAnalysisComponent implements OnInit {
   }
 
   handleSaveResults(): void {
-    // TODO: Implement registration flow in Story 2
-    console.log('Save results clicked - will redirect to registration');
-    // Future: this.router.navigate(['/register'], { queryParams: { returnUrl: `/analysis/${this.resumeId()}` } });
+    // Show registration dialog instead of direct navigation
+    this.showRegisterDialog.set(true);
+  }
+
+  handleRegisterClick(): void {
+    this.showRegisterDialog.set(false);
+    const candidateInfo = this.analysis()?.candidateInfo;
+    
+    // Navigate to register with pre-filled data
+    this.router.navigate(['/register'], {
+      queryParams: {
+        resumeId: this.resumeId(),
+        prefillName: candidateInfo?.fullName || '',
+        prefillEmail: candidateInfo?.email || '',
+        prefillPhone: candidateInfo?.phone || ''
+      }
+    });
+  }
+
+  handleContinueAsGuest(): void {
+    this.showRegisterDialog.set(false);
   }
 
   private startPolling(): void {
@@ -126,9 +148,22 @@ export class ResumeAnalysisComponent implements OnInit {
       .subscribe({
         next: (analysisData) => {
           this.analysis.set(analysisData);
-          // Set isAnonymous based on userId from API response (fixes security issue)
-          this.isAnonymous.set(analysisData.userId.startsWith('guest-'));
+          
+          // User is anonymous if: userId starts with 'guest-' AND user is not authenticated
+          const isGuestUserId = analysisData.userId?.startsWith('guest-') ?? false;
+          const isAuthenticated = this.authService.isAuthenticated();
+          const isAnonymous = isGuestUserId && !isAuthenticated;
+          
+          this.isAnonymous.set(isAnonymous);
           this.isLoading.set(false);
+          
+          // Show registration dialog for anonymous users after successful analysis
+          if (isAnonymous) {
+            // Small delay to let the user see the results first
+            setTimeout(() => {
+              this.showRegisterDialog.set(true);
+            }, 1500);
+          }
         },
         error: (error) => {
           console.error('Failed to load analysis:', error);

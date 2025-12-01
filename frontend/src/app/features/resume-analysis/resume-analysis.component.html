@@ -1,4 +1,15 @@
 <div class="analysis-container">
+  <!-- Registration Prompt Dialog for Anonymous Users -->
+  @if (showRegisterDialog()) {
+    <app-register-prompt-dialog
+      [candidateInfo]="analysis()?.candidateInfo ?? null"
+      [resumeId]="resumeId()"
+      [score]="analysis()?.score ?? null"
+      (registerClicked)="handleRegisterClick()"
+      (continueAsGuest)="handleContinueAsGuest()"
+    />
+  }
+
   <!-- Save Results Banner for Anonymous Users -->
   @if (!isLoading() && !errorMessage() && isAnonymous()) {
     <app-save-results-banner 
@@ -66,6 +77,28 @@
         <app-candidate-info-card 
           [candidateInfo]="analysis()!.candidateInfo!"
         />
+      }
+
+      <!-- Guest User Registration CTA -->
+      @if (isAnonymous()) {
+        <div class="registration-cta">
+          <div class="cta-content">
+            <div class="cta-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="32" height="32">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <div class="cta-text">
+              <h3>Save Your Results</h3>
+              <p>Create a free account to save your analysis, track improvements, and access your results anytime.</p>
+              <p class="warning-text">⚠️ Guest data expires in 24 hours</p>
+            </div>
+            <button class="btn btn-primary btn-lg" (click)="handleRegisterClick()">
+              Create Free Account
+            </button>
+          </div>
+        </div>
       }
 
     <!-- Suggestions Section -->

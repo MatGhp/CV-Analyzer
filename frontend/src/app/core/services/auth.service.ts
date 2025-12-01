@@ -135,10 +135,11 @@ export class AuthService {
 
   /**
    * Get guest session token (if exists from previous guest upload)
+   * Uses 'cv-analyzer-session-id' key to match resume-upload component
    */
   getGuestSessionToken(): string | null {
     if (typeof window !== 'undefined' && window.localStorage) {
-      return localStorage.getItem('guest_session_token');
+      return localStorage.getItem('cv-analyzer-session-id');
     }
     return null;
   }
@@ -148,7 +149,7 @@ export class AuthService {
    */
   clearGuestSessionToken(): void {
     if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.removeItem('guest_session_token');
+      localStorage.removeItem('cv-analyzer-session-id');
     }
   }
 

@@ -125,7 +125,7 @@ public sealed class ResumeAnalysisAgent
                 Description = s.Description,
                 Priority = Math.Clamp(s.Priority, 1, 5)
             }).ToArray() ?? Array.Empty<ResumeSuggestion>(),
-            Metadata = agentResponse.Metadata ?? new Dictionary<string, string>()
+            Metadata = agentResponse.Metadata ?? new Dictionary<string, JsonElement>()
         };
     }
 
@@ -279,7 +279,7 @@ Keep responses concise and professional. Extract all available candidate informa
         public IReadOnlyList<AgentSuggestion>? Suggestions { get; init; }
 
         [JsonPropertyName("metadata")]
-        public Dictionary<string, string>? Metadata { get; init; }
+        public Dictionary<string, JsonElement>? Metadata { get; init; }
     }
 
     private sealed class AgentCandidateInfo
