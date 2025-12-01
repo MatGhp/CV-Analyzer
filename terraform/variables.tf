@@ -132,3 +132,26 @@ variable "sql_database_sku" {
     error_message = "Database SKU must be a valid Azure SQL Database SKU."
   }
 }
+
+variable "jwt_secret_key" {
+  description = "JWT secret key for API token signing. Must be at least 32 characters."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(var.jwt_secret_key) >= 32
+    error_message = "JWT secret key must be at least 32 characters for HS256 algorithm security."
+  }
+}
+
+variable "jwt_issuer" {
+  description = "JWT token issuer identifier"
+  type        = string
+  default     = "CVAnalyzer"
+}
+
+variable "jwt_audience" {
+  description = "JWT token audience identifier"
+  type        = string
+  default     = "CVAnalyzerAPI"
+}
