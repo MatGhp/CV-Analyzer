@@ -151,6 +151,11 @@ module "container_apps" {
   max_replicas                     = var.max_replicas
   enable_health_probes             = local.enable_health_probes
 
+  # JWT configuration
+  jwt_secret_key = var.jwt_secret_key
+  jwt_issuer     = var.jwt_issuer
+  jwt_audience   = var.jwt_audience
+
   tags = local.common_tags
 }
 
@@ -192,6 +197,14 @@ resource "azurerm_key_vault_secret" "app_insights_connection" {
 resource "azurerm_key_vault_secret" "app_insights_instrumentation" {
   name         = "ApplicationInsightsInstrumentationKey"
   value        = azurerm_application_insights.main.instrumentation_key
+  key_vault_id = module.key_vault.id
+
+  depends_on = [time_sleep.wait_for_rbac]
+}
+
+resource "azurerm_key_vault_secret" "jwt_secret_key" {
+  name         = "JwtSecretKey"
+  value        = var.jwt_secret_key
   key_vault_id = module.key_vault.id
 
   depends_on = [time_sleep.wait_for_rbac]

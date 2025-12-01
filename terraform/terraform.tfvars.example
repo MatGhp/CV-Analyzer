@@ -2,3 +2,9 @@ environment = "dev"
 resource_group_name = "rg-cvanalyzer-dev"
 location = "germanywestcentral"
 app_name = "cvanalyzer"
+
+# JWT Configuration (required)
+# Generate a secure key with: openssl rand -base64 32
+jwt_secret_key = "your-jwt-secret-key-minimum-32-characters-long"
+jwt_issuer     = "CVAnalyzer"
+jwt_audience   = "CVAnalyzerAPI"

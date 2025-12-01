@@ -134,3 +134,21 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "jwt_secret_key" {
+  description = "JWT secret key for token signing (minimum 32 characters)"
+  type        = string
+  sensitive   = true
+}
+
+variable "jwt_issuer" {
+  description = "JWT token issuer"
+  type        = string
+  default     = "CVAnalyzer"
+}
+
+variable "jwt_audience" {
+  description = "JWT token audience"
+  type        = string
+  default     = "CVAnalyzerAPI"
+}

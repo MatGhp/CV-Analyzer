@@ -265,6 +265,21 @@ resource "azurerm_container_app" "api" {
         value = var.app_insights_instrumentation_key
       }
 
+      env {
+        name  = "Jwt__SecretKey"
+        value = var.jwt_secret_key
+      }
+
+      env {
+        name  = "Jwt__Issuer"
+        value = var.jwt_issuer
+      }
+
+      env {
+        name  = "Jwt__Audience"
+        value = var.jwt_audience
+      }
+
       # Liveness probe - detects and restarts failed containers
       # Checks /health endpoint to ensure API is responding
       # Note: failure_threshold and success_threshold are not supported by Azure Container Apps Terraform provider

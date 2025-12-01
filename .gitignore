@@ -120,6 +120,7 @@ backend/src/**/appsettings.Staging.json
 backend/src/**/appsettings.*.json
 !backend/src/**/appsettings.json
 !backend/src/**/appsettings.*.example.json
+!backend/src/**/appsettings.Testing.json
 
 # ============================================
 # Python AI Service
