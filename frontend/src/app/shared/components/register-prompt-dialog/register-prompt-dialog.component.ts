@@ -16,7 +16,6 @@ export class RegisterPromptDialogComponent {
   
   @Output() registerClicked = new EventEmitter<void>();
   @Output() continueAsGuest = new EventEmitter<void>();
-  @Output() closeDialog = new EventEmitter<void>();
 
   isClosing = signal(false);
 

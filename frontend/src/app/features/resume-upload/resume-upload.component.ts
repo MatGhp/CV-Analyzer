@@ -78,7 +78,8 @@ export class ResumeUploadComponent {
     if (this.authService.isAuthenticated()) {
       try {
         return this.authService.getCurrentUserId();
-      } catch {
+      } catch (error) {
+        console.warn('Failed to get authenticated user ID, falling back to guest ID:', error);
         // Fall through to guest ID if something goes wrong
       }
     }

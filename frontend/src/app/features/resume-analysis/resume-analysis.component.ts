@@ -116,12 +116,6 @@ export class ResumeAnalysisComponent implements OnInit {
 
   handleContinueAsGuest(): void {
     this.showRegisterDialog.set(false);
-    // User chose to stay as guest - data will expire in 24 hours
-    console.log('User continued as guest - data expires in 24 hours');
-  }
-
-  handleCloseDialog(): void {
-    this.showRegisterDialog.set(false);
   }
 
   private startPolling(): void {

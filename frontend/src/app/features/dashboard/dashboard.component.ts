@@ -74,26 +74,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.loading.set(true);
       this.error.set(null);
 
-      console.log('Loading user data...');
-
       // Load user profile
       const profileResponse = await this.http.get<UserProfile>(`${environment.apiUrl}/auth/me`).toPromise();
-      console.log('Profile response:', profileResponse);
       this.profile.set(profileResponse || null);
 
       // Load user resumes
       const resumesResponse = await this.http.get<Resume[]>(`${environment.apiUrl}/auth/me/resumes`).toPromise();
-      console.log('Resumes response:', resumesResponse);
       this.resumes.set(resumesResponse || []);
-      
-      console.log('Profile signal value:', this.profile());
-      console.log('Resumes signal value:', this.resumes());
     } catch (err: any) {
       console.error('Failed to load dashboard data:', err);
       this.error.set('Failed to load your data. Please try again.');
     } finally {
       this.loading.set(false);
-      console.log('Loading complete. loading:', this.loading(), 'error:', this.error(), 'profile:', !!this.profile());
     }
   }
 
