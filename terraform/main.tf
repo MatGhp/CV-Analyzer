@@ -163,30 +163,20 @@ module "container_apps" {
 # Key Vault Secrets (created AFTER RBAC assignments propagate)
 # ========================================
 
-# Role assignment: Current Terraform executor (local user or SP) needs to manage Key Vault secrets
+# Role assignment: GitHub Actions service principal needs to manage Key Vault secrets
+# This is the SP used by CI/CD pipelines. The same role assignment works for local development
+# if the user has Key Vault access (add via Azure Portal if needed for local dev).
 resource "azurerm_role_assignment" "terraform_keyvault" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets Officer"
-  principal_id         = data.azurerm_client_config.current.object_id
-}
-
-# Role assignment: GitHub Actions service principal needs Key Vault access for CI/CD deployments
-# This ensures the same SP that runs in GitHub Actions can access secrets on subsequent runs
-resource "azurerm_role_assignment" "github_actions_keyvault" {
-  count                = var.github_actions_sp_object_id != null ? 1 : 0
-  scope                = module.key_vault.id
-  role_definition_name = "Key Vault Secrets Officer"
-  principal_id         = var.github_actions_sp_object_id
+  principal_id         = var.github_actions_sp_object_id != null ? var.github_actions_sp_object_id : data.azurerm_client_config.current.object_id
 }
 
 # Wait for RBAC permissions to propagate (Azure RBAC can take up to 2 minutes)
 resource "time_sleep" "wait_for_rbac" {
   create_duration = "120s"
 
-  depends_on = [
-    azurerm_role_assignment.terraform_keyvault,
-    azurerm_role_assignment.github_actions_keyvault
-  ]
+  depends_on = [azurerm_role_assignment.terraform_keyvault]
 }
 
 # Key Vault secrets - created after RBAC propagation
