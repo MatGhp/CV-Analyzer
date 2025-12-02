@@ -40,3 +40,6 @@ image_tag = "latest"
 # }
 sql_firewall_rules = {}
 
+# GitHub Actions Service Principal Object ID
+# Required for CI/CD deployments to access Key Vault secrets
+github_actions_sp_object_id = "69080a52-ea0f-4293-84e4-415c1ed697f2"

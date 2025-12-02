@@ -155,3 +155,9 @@ variable "jwt_audience" {
   type        = string
   default     = "CVAnalyzerAPI"
 }
+
+variable "github_actions_sp_object_id" {
+  description = "Object ID of the GitHub Actions service principal for Key Vault access. Required for CI/CD deployments."
+  type        = string
+  default     = null
+}
