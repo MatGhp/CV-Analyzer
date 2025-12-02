@@ -10,5 +10,9 @@ sql_firewall_rules = {
   }
 }
 
-# SQL Admin Password (if not using environment variable)
-# sql_admin_password = "YourStrongPassword123!"
+# SQL Admin Password
+# RECOMMENDED: Set via environment variable instead of this file:
+#   PowerShell: $env:TF_VAR_sql_admin_password = "YourPassword"
+#   Bash: export TF_VAR_sql_admin_password="YourPassword"
+# Use same password as GitHub secret SQL_ADMIN_PASSWORD for consistency
+# sql_admin_password = "<YOUR_SQL_PASSWORD>"

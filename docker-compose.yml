@@ -26,7 +26,7 @@ services:
       - "5000:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=CVAnalyzerDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=CVAnalyzerDb;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True
       - UseKeyVault=false
       # ========================================
       # Local Development Credentials
@@ -51,7 +51,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
+      - SA_PASSWORD=${SQL_SA_PASSWORD}
     ports:
       - "1433:1433"
     volumes:

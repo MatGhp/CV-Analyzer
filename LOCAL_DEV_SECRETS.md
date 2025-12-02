@@ -61,7 +61,7 @@ Open `.env` in your editor and replace placeholders:
 AZURE_STORAGE_CONNECTION_STRING=<paste connection string from step 2>
 AGENT_API_KEY=<paste OpenAI key from step 2>
 DOCUMENT_INTELLIGENCE_API_KEY=<paste Doc Intel key from step 2>
-SQL_SA_PASSWORD=YourStrong@Passw0rd  # Or choose your own password
+SQL_SA_PASSWORD=<same as GitHub secret SQL_ADMIN_PASSWORD>
 ```
 
 **Step 4: Start the full stack**
